@@ -1,10 +1,13 @@
 # Payment Service - Design Document
 
 ## 1. Overview
-
 The Payment Service is responsible for payment creation, authorization, capture, and settlement. It acts as the entry point for payment processing in the MercuryPay platform.
 
-## 2. Domain Model
+## 2. User Stories
+- **US-PAY-01**: As a user, I want to initiate a payment so that I can transfer money to another user.
+- **US-PAY-02**: As a system, I want to validate that the payment amount is positive to prevent errors.
+
+## 3. Domain Model
 
 ### Aggregates
 
@@ -20,7 +23,7 @@ The Payment Service is responsible for payment creation, authorization, capture,
 
 - **Money**: Represents amount and currency.
 
-## 3. API Specification
+## 4. API Specification
 
 ### Create Payment
 
@@ -46,14 +49,14 @@ The Payment Service is responsible for payment creation, authorization, capture,
   }
   ```
 
-## 4. Requirements Traceability Matrix (RTM)
+## 5. Requirements Traceability Matrix (RTM)
 
 | Requirement ID | Description | Test Case ID | Implementation Status |
 |---|---|---|---|
 | REQ-PAY-001 | System must allow creating a new payment. | TEST-PAY-001 | Implemented |
-| REQ-PAY-002 | Payment amount must be positive. | TEST-PAY-002 | Pending |
+| REQ-PAY-002 | Payment amount must be positive. | TEST-PAY-002 | Implemented |
 
-## 5. Architecture
+## 6. Architecture
 
 - **Layered Architecture**: Controller -> Service -> Domain -> Infrastructure (Repository).
 - **Persistence**: Database-per-service (PostgreSQL - mocked for now).

@@ -11,6 +11,11 @@ public class PaymentService : IPaymentService
 {
     public PaymentResponse CreatePayment(PaymentRequest request)
     {
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentException("Amount must be positive");
+        }
+
         // In a real application, this would save to a database.
         return new PaymentResponse(
             Guid.NewGuid(),

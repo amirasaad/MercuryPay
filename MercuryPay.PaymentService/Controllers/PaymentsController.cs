@@ -13,7 +13,14 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     [HttpPost]
     public IActionResult Create([FromBody] PaymentRequest request)
     {
-        var response = _paymentService.CreatePayment(request);
-        return CreatedAtAction(nameof(Create), new { id = response.Id }, response);
+        try
+        {
+            var response = _paymentService.CreatePayment(request);
+            return CreatedAtAction(nameof(Create), new { id = response.Id }, response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }

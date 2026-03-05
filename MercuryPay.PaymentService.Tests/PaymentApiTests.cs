@@ -33,6 +33,26 @@ public class PaymentApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.NotEqual(Guid.Empty, responseBody.Id);
         Assert.Equal("Pending", responseBody.Status);
     }
+
+    [Fact]
+    public async Task CreatePayment_ReturnsBadRequest_WhenAmountIsNegative()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var request = new
+        {
+            Amount = -10.00m,
+            Currency = "USD",
+            FromUserId = "user_123",
+            ToUserId = "merchant_456"
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/payments", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
 
 public class PaymentResponse
