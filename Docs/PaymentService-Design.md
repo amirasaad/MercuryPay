@@ -6,6 +6,7 @@ The Payment Service is responsible for payment creation, authorization, capture,
 ## 2. User Stories
 - **US-PAY-01**: As a user, I want to initiate a payment so that I can transfer money to another user.
 - **US-PAY-02**: As a system, I want to validate that the payment amount is positive to prevent errors.
+- **US-PAY-03**: As a user, I want to retrieve payment details so that I can check the status of my transaction.
 
 ## 3. Domain Model
 
@@ -49,12 +50,26 @@ The Payment Service is responsible for payment creation, authorization, capture,
   }
   ```
 
+### Get Payment
+- **Endpoint**: `GET /payments/{id}`
+- **Response**: `200 OK`
+  ```json
+  {
+    "id": "guid",
+    "status": "Pending",
+    "amount": 100.00,
+    ...
+  }
+  ```
+- **Response**: `404 Not Found`
+
 ## 5. Requirements Traceability Matrix (RTM)
 
 | Requirement ID | Description | Test Case ID | Implementation Status |
 |---|---|---|---|
 | REQ-PAY-001 | System must allow creating a new payment. | TEST-PAY-001 | Implemented |
 | REQ-PAY-002 | Payment amount must be positive. | TEST-PAY-002 | Implemented |
+| REQ-PAY-003 | System must allow retrieving payment details by ID. | TEST-PAY-003 | Implemented |
 
 ## 6. Architecture
 

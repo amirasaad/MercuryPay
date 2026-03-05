@@ -23,4 +23,15 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpGet("{id}")]
+    public IActionResult Get(Guid id)
+    {
+        var payment = _paymentService.GetPayment(id);
+        if (payment == null)
+        {
+            return NotFound();
+        }
+        return Ok(payment);
+    }
 }
