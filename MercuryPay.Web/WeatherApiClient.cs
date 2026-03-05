@@ -1,4 +1,4 @@
-namespace AspireApp.Web;
+namespace MercuryPay.Web;
 
 public class WeatherApiClient(HttpClient httpClient)
 {

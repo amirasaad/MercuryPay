@@ -2,13 +2,13 @@
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.0.0
 MinimumVisualStudioVersion = 17.8.0.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspireApp.AppHost", "AspireApp.AppHost\AspireApp.AppHost.csproj", "{B62B69FD-FDE0-4124-A318-0380C30B4041}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MercuryPay.AppHost", "MercuryPay.AppHost\MercuryPay.AppHost.csproj", "{B62B69FD-FDE0-4124-A318-0380C30B4041}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspireApp.ServiceDefaults", "AspireApp.ServiceDefaults\AspireApp.ServiceDefaults.csproj", "{23223A94-54B6-471A-BAFC-895986D696C4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MercuryPay.ServiceDefaults", "MercuryPay.ServiceDefaults\MercuryPay.ServiceDefaults.csproj", "{23223A94-54B6-471A-BAFC-895986D696C4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspireApp.ApiService", "AspireApp.ApiService\AspireApp.ApiService.csproj", "{B828CFED-7728-4DFE-85C3-93497ED9749E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MercuryPay.PaymentService", "MercuryPay.PaymentService\MercuryPay.PaymentService.csproj", "{B828CFED-7728-4DFE-85C3-93497ED9749E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspireApp.Web", "AspireApp.Web\AspireApp.Web.csproj", "{DCD6860A-B940-4C46-A3F4-A7DD00FC9591}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MercuryPay.Web", "MercuryPay.Web\MercuryPay.Web.csproj", "{DCD6860A-B940-4C46-A3F4-A7DD00FC9591}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,9 +1,9 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var apiService = builder.AddProject<Projects.AspireApp_ApiService>("apiservice")
+var apiService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
     .WithHttpHealthCheck("/health");
 
-builder.AddProject<Projects.AspireApp_Web>("webfrontend")
+builder.AddProject<Projects.MercuryPay_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
     .WithReference(apiService)

@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AspireApp.ApiService\AspireApp.ApiService.csproj" />
-    <ProjectReference Include="..\AspireApp.Web\AspireApp.Web.csproj" />
+    <ProjectReference Include="..\MercuryPay.PaymentService\MercuryPay.PaymentService.csproj" />
+    <ProjectReference Include="..\MercuryPay.Web\MercuryPay.Web.csproj" />
   </ItemGroup>
 
 </Project>
