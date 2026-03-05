@@ -234,3 +234,8 @@ NetSparkleFeed.xml
 .DS_Store
 
 # End of https://www.gitignore.io/api/visualstudio,visualstudiocode
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
