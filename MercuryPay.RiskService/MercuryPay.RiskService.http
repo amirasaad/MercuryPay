@@ -1,0 +1,6 @@
+@MercuryPay.RiskService_HostAddress = http://localhost:5189
+
+GET {{MercuryPay.RiskService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

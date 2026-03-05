@@ -1,0 +1,6 @@
+@MercuryPay.LendingService_HostAddress = http://localhost:5196
+
+GET {{MercuryPay.LendingService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

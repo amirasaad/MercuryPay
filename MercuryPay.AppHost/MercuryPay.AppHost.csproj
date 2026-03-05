@@ -11,6 +11,9 @@
   <ItemGroup>
     <ProjectReference Include="..\MercuryPay.PaymentService\MercuryPay.PaymentService.csproj" />
     <ProjectReference Include="..\MercuryPay.Web\MercuryPay.Web.csproj" />
+    <ProjectReference Include="..\MercuryPay.WalletService\MercuryPay.WalletService.csproj" />
+    <ProjectReference Include="..\MercuryPay.LendingService\MercuryPay.LendingService.csproj" />
+    <ProjectReference Include="..\MercuryPay.RiskService\MercuryPay.RiskService.csproj" />
   </ItemGroup>
 
 </Project>
