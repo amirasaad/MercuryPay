@@ -1,5 +1,11 @@
 # Development Process
 
+## 🚨 MANDATORY RULES
+
+1. **Docs-First**: You MUST write/update documentation *before* writing any code.
+2. **TDD**: You MUST write failing tests *before* implementing functionality.
+3. **Verification**: You MUST verify that documentation matches the final implementation.
+
 ## Overview
 
 This document outlines the **Documentation-Driven Development (DDD)** process for MercuryPay. We enforce a strict "Design First, Code Second" policy to ensure clarity, maintainability, and alignment with requirements.

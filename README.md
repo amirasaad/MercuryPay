@@ -18,6 +18,13 @@ dotnet run --project src/MercuryPay.AppHost
 - [Payment Service Design](Docs/PaymentService-Design.md)
 - [Wallet Service Design](Docs/WalletService-Design.md)
 - [Commit Guidelines](Docs/Commit-Guidelines.md)
+- [Development Process](Docs/Development-Process.md)
+- [Trae Assistant Rules](project_rules.md)
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+We enforce **Test-Driven Development (TDD)** and **Documentation-Driven Development**.
 
 ## Overview
 
