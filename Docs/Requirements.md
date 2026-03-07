@@ -150,7 +150,7 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | **REQ-PAY-002** | Validate Amount | P1 | `PaymentService.Domain.Payment` | `TEST-PAY-002` | Implemented |
 | **REQ-PAY-003** | Get Payment Details | P2 | `PaymentService.Controllers.PaymentsController` | `TEST-PAY-003` | Implemented |
 | **REQ-PAY-004** | Publish PaymentCreated | P1 | `PaymentService.Infrastructure.EventBus` | `TEST-PAY-INT-001` | Implemented |
-| **REQ-PAY-005** | Process FraudEvaluated | P1 | `PaymentService.Consumers.FraudEvaluatedConsumer` | `TEST-PAY-INT-002` | Pending |
+| **REQ-PAY-005** | Process FraudEvaluated | P1 | `PaymentService.Consumers.FraudEvaluatedConsumer` | `TEST-PAY-INT-002` | Implemented |
 | **REQ-WAL-001** | Create Wallet | P1 | `WalletService.Controllers.WalletsController` | `TEST-WAL-001` | Implemented |
 | **REQ-WAL-002** | Zero Balance Start | P2 | `WalletService.Domain.Wallet` | `TEST-WAL-002` | Implemented |
 | **REQ-WAL-003** | Immutable Ledger | P1 | `WalletService.Domain.LedgerEntry` | `TEST-WAL-003` | Implemented |
@@ -160,8 +160,8 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | **REQ-LEND-002** | Calculate Repayment | P2 | `LendingService.Domain.Loan` | `TEST-LEND-002` | Pending |
 | **REQ-LEND-003** | Disbursement | P1 | `LendingService.Domain.Loan` | `TEST-LEND-003` | Pending |
 | **REQ-LEND-004** | List User Loans | P2 | `LendingService.Controllers.LoansController` | `TEST-LEND-004` | Implemented |
-| **REQ-RISK-001** | Evaluate Fraud | P1 | `RiskService.Services.FraudDetector` | `TEST-RISK-001` | Pending |
-| **REQ-RISK-002** | Risk Score | P2 | `RiskService.Domain.RiskAssessment` | `TEST-RISK-002` | Pending |
+| **REQ-RISK-001** | Evaluate Fraud | P1 | `RiskService.Domain.RiskAssessment` | `TEST-RISK-E2E-001` | Implemented |
+| **REQ-RISK-002** | Risk Score | P2 | `RiskService.Domain.RiskAssessment` | `TEST-RISK-E2E-002` | Implemented |
 | **REQ-RISK-003** | Audit History | P3 | `RiskService.Infrastructure.RiskRepository` | `TEST-RISK-003` | Pending |
 | **REQ-WEB-000** | User Login | P0 | `Web.Components.Pages.Login` | `TEST-E2E-LOGIN-001` | Passed |
 | **REQ-WEB-001** | Dashboard Access | P1 | `Web.Components.Pages.Home` | `TEST-E2E-HOME-001` | Passed |
