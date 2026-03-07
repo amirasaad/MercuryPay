@@ -72,6 +72,8 @@ The Wallet Service is responsible for managing user wallets, balances, and doubl
 
 ## 5. Requirements Traceability Matrix (RTM)
 
+For the full project requirements and traceability matrix, please refer to [Requirements.md](./Requirements.md).
+
 | Requirement ID | Description | Test Case ID | Implementation Status |
 | --- | --- | --- | --- |
 | REQ-WAL-001 | System must allow creating a new wallet for a user. | TEST-WAL-001 | Implemented |

@@ -12,6 +12,13 @@ dotnet run --project src/MercuryPay.AppHost
 # https://localhost:17225
 ```
 
+## Documentation
+
+- [Project Requirements & Traceability Matrix](Docs/Requirements.md)
+- [Payment Service Design](Docs/PaymentService-Design.md)
+- [Wallet Service Design](Docs/WalletService-Design.md)
+- [Commit Guidelines](Docs/Commit-Guidelines.md)
+
 ## Overview
 
 MercuryPay is a cloud-native distributed platform that demonstrates:

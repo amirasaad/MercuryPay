@@ -65,6 +65,8 @@ The Payment Service is responsible for payment creation, authorization, capture,
 
 ## 5. Requirements Traceability Matrix (RTM)
 
+For the full project requirements and traceability matrix, please refer to [Requirements.md](./Requirements.md).
+
 | Requirement ID | Description | Test Case ID | Implementation Status |
 |---|---|---|---|
 | REQ-PAY-001 | System must allow creating a new payment. | TEST-PAY-001 | Implemented |
