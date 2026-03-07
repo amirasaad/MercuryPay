@@ -1,0 +1,85 @@
+@page "/loans"
+@using MercuryPay.Web
+@inject LendingApiClient LendingApi
+@inject NavigationManager Navigation
+
+<PageTitle>Apply for Loan</PageTitle>
+
+<h1>Apply for a Loan</h1>
+
+<p>Enter the amount you wish to borrow.</p>
+
+@if (successMessage != null)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<EditForm Model="@(loanModel!)" OnValidSubmit="HandleSubmit" FormName="LoanForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="amount" class="form-label">Amount</label>
+        <InputNumber id="amount" class="form-control" @bind-Value="loanModel!.Amount" />
+    </div>
+
+    <div class="mb-3">
+        <label for="currency" class="form-label">Currency</label>
+        <InputText id="currency" class="form-control" @bind-Value="loanModel!.Currency" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Apply</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoanViewModel? loanModel { get; set; }
+
+    protected override void OnInitialized()
+    {
+        loanModel ??= new();
+    }
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private async Task HandleSubmit()
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        if (loanModel is null) return;
+
+        try
+        {
+            // Hardcoded user ID for now as we don't have auth context in this demo
+            var request = new LoanRequestModel("user_web_1", loanModel.Amount, loanModel.Currency);
+            var result = await LendingApi.CreateLoanAsync(request);
+            
+            if (result != null)
+            {
+                successMessage = $"Loan application submitted successfully! ID: {result.Id}, Status: {result.Status}";
+                // Reset is tricky with SupplyParameterFromForm, but for now it's fine
+            }
+            else
+            {
+                errorMessage = "Failed to submit loan application.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    public class LoanViewModel
+    {
+        public decimal Amount { get; set; } = 1000;
+        public string Currency { get; set; } = "USD";
+    }
+}

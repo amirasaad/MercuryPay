@@ -19,6 +19,11 @@ builder.Services.AddHttpClient<WeatherApiClient>(client =>
         client.BaseAddress = new("https+http://paymentservice");
     });
 
+builder.Services.AddHttpClient<LendingApiClient>(client =>
+    {
+        client.BaseAddress = new("https+http://lendingservice");
+    });
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
