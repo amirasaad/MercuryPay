@@ -37,6 +37,12 @@ builder.AddEventBus(x =>
             o.UseBusOutbox();
         });
     }
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
+        cfg.ConfigureEndpoints(context);
+    });
 });
 
 builder.Services.AddProblemDetails();

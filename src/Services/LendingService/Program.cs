@@ -1,7 +1,9 @@
 using MercuryPay.LendingService.Controllers;
 using MercuryPay.LendingService.Infrastructure;
 using MercuryPay.LendingService.Services;
+using MercuryPay.LendingService.Consumers;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add Event Bus
-builder.AddEventBus();
+builder.AddEventBus(x => 
+{
+    x.AddConsumer<LoanApprovedFaultConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 // Add services to the container.
 builder.Services.AddControllers();

@@ -54,22 +54,36 @@ public static class Extensions
             
             configure?.Invoke(x);
 
-            var connectionString = builder.Configuration.GetConnectionString("messaging");
+            // Default configuration if no transport is configured
+            if (!x.GetType().GetProperties().Any(p => p.Name == "BusConfigurator"))
+            {
+                 var connectionString = builder.Configuration.GetConnectionString("messaging");
 
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                x.UsingInMemory((context, cfg) =>
+                if (string.IsNullOrEmpty(connectionString))
                 {
-                    cfg.ConfigureEndpoints(context);
-                });
-            }
-            else
-            {
-                x.UsingRabbitMq((context, cfg) =>
+                    x.UsingInMemory((context, cfg) =>
+                    {
+                        cfg.ConfigureEndpoints(context);
+                    });
+                }
+                else
                 {
-                    cfg.Host(connectionString);
-                    cfg.ConfigureEndpoints(context);
-                });
+                    // This is the default if not overridden in 'configure'
+                    // However, we want to allow services to configure their own transport (like adding middleware)
+                    // So we only apply this if they haven't called UsingRabbitMq themselves.
+                    // But MassTransit doesn't easily expose "has transport been configured".
+                    // A common pattern is to let the service configure the transport.
+                    
+                    // For now, to keep backward compatibility with services that just call AddEventBus(),
+                    // we can check if the service provided a configuration action. 
+                    // But the services (Lending/Payment) are now calling UsingRabbitMq inside the action.
+                    // So we should REMOVE the default configuration here if it conflicts, OR
+                    // just rely on the service to configure it.
+                    
+                    // The previous edit REMOVED the default configuration. 
+                    // But wait, if I have other services (like WalletService) that relies on the default, I broke them.
+                    // Let's check WalletService.
+                }
             }
         });
 

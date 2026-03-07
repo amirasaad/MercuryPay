@@ -30,6 +30,19 @@ builder.AddEventBus((x) =>
     
     x.AddConsumer<LoanApprovedConsumer>();
 
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
+        
+        cfg.ReceiveEndpoint("loan-approved", e =>
+        {
+            e.ConfigureConsumer<LoanApprovedConsumer>(context);
+            e.UseMessageRetry(r => r.Exponential(5, TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(500)));
+        });
+
+        cfg.ConfigureEndpoints(context);
+    });
+
     if (!string.IsNullOrEmpty(connectionString))
     {
         x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>

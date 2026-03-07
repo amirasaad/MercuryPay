@@ -8,4 +8,9 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
     public string Currency { get; private set; } = currency;
     public string Status { get; private set; } = status;
     public DateTime CreatedAt { get; private set; } = createdAt;
+
+    public void MarkAsDisbursementFailed()
+    {
+        Status = "DisbursementFailed";
+    }
 }

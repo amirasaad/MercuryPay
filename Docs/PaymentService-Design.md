@@ -1,9 +1,11 @@
 # Payment Service - Design Document
 
 ## 1. Overview
+
 The Payment Service is responsible for payment creation, authorization, capture, and settlement. It acts as the entry point for payment processing in the MercuryPay platform.
 
 ## 2. User Stories
+
 - **US-PAY-01**: As a user, I want to initiate a payment so that I can transfer money to another user.
 - **US-PAY-02**: As a system, I want to validate that the payment amount is positive to prevent errors.
 - **US-PAY-03**: As a user, I want to retrieve payment details so that I can check the status of my transaction.
@@ -30,6 +32,7 @@ The Payment Service is responsible for payment creation, authorization, capture,
 
 - **Endpoint**: `POST /payments`
 - **Request Body**:
+
   ```json
   {
     "amount": 100.00,
@@ -38,7 +41,9 @@ The Payment Service is responsible for payment creation, authorization, capture,
     "toUserId": "merchant_456"
   }
   ```
+
 - **Response**: `201 Created`
+
   ```json
   {
     "id": "guid",
@@ -48,8 +53,10 @@ The Payment Service is responsible for payment creation, authorization, capture,
   ```
 
 ### Get Payment
+
 - **Endpoint**: `GET /payments/{id}`
 - **Response**: `200 OK`
+
   ```json
   {
     "id": "guid",
@@ -58,11 +65,13 @@ The Payment Service is responsible for payment creation, authorization, capture,
     ...
   }
   ```
+
 - **Response**: `404 Not Found`
 
 ## 5. Event Consumers
 
 ### LoanApproved
+
 - **Source**: Lending Service
 - **Action**: Creates a payment from "LendingService" to the borrower (User).
 - **Status**: Completed (Immediate disbursement).
