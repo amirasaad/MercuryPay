@@ -74,6 +74,23 @@ The Lending Service is responsible for managing loan applications, approvals, an
   }
   ```
 
+### Get User Loans
+
+- **Endpoint**: `GET /loans/user/{userId}`
+- **Response**: `200 OK`
+
+  ```json
+  [
+    {
+      "id": "guid",
+      "status": "Active",
+      "amount": 1000.00,
+      "currency": "USD"
+    },
+    ...
+  ]
+  ```
+
 ## 5. Requirements Traceability Matrix (RTM)
 
 | Requirement ID | Description | Test Case ID | Status |
@@ -81,6 +98,7 @@ The Lending Service is responsible for managing loan applications, approvals, an
 | REQ-LEND-001 | System must allow creating a new loan application. | TEST-LEND-001 | Pending |
 | REQ-LEND-002 | Loan amount must be positive. | TEST-LEND-002 | Pending |
 | REQ-LEND-003 | System must retrieve loan details by ID. | TEST-LEND-003 | Pending |
+| REQ-LEND-004 | System must list all loans for a specific user. | TEST-LEND-004 | Pending |
 
 ## 6. Architecture
 

@@ -46,6 +46,20 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.Status
         ));
     }
+
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetByUser(string userId)
+    {
+        var loans = await _lendingService.GetLoansByUser(userId);
+        
+        return Ok(loans.Select(loan => new LoanResponse(
+            loan.Id,
+            loan.UserId,
+            loan.Amount,
+            loan.Currency,
+            loan.Status
+        )));
+    }
 }
 
 public record CreateLoanRequest(string UserId, decimal Amount, string Currency);

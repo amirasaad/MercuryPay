@@ -7,6 +7,7 @@ public interface ILendingService
 {
     Task<Loan> CreateLoan(string userId, decimal amount, string currency);
     Task<Loan?> GetLoan(Guid id);
+    Task<List<Loan>> GetLoansByUser(string userId);
 }
 
 public class LendingService(LendingDbContext context, ILogger<LendingService> logger) : ILendingService
@@ -35,5 +36,11 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
     public async Task<Loan?> GetLoan(Guid id)
     {
         return await _context.Loans.FindAsync(id);
+    }
+
+    public async Task<List<Loan>> GetLoansByUser(string userId)
+    {
+        return await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            System.Linq.Queryable.Where(_context.Loans, l => l.UserId == userId));
     }
 }

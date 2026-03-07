@@ -36,13 +36,66 @@
     <button type="submit" class="btn btn-primary">Apply</button>
 </EditForm>
 
+<hr class="my-5" />
+
+<h2>Your Loans</h2>
+
+@if (userLoans == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!userLoans.Any())
+{
+    <p>No loans found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var loan in userLoans)
+            {
+                <tr>
+                    <td>@loan.Id</td>
+                    <td>@loan.Amount</td>
+                    <td>@loan.Currency</td>
+                    <td>@loan.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
 @code {
     [SupplyParameterFromForm]
     private LoanViewModel? loanModel { get; set; }
+    
+    private List<LoanResponseModel>? userLoans;
+    private const string UserId = "user_web_1";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         loanModel ??= new();
+        await LoadLoans();
+    }
+
+    private async Task LoadLoans()
+    {
+        try
+        {
+            userLoans = await LendingApi.GetLoansAsync(UserId);
+        }
+        catch (Exception)
+        {
+            userLoans = new List<LoanResponseModel>();
+        }
     }
 
     private string? successMessage;
@@ -58,13 +111,13 @@
         try
         {
             // Hardcoded user ID for now as we don't have auth context in this demo
-            var request = new LoanRequestModel("user_web_1", loanModel.Amount, loanModel.Currency);
+            var request = new LoanRequestModel(UserId, loanModel.Amount, loanModel.Currency);
             var result = await LendingApi.CreateLoanAsync(request);
             
             if (result != null)
             {
                 successMessage = $"Loan application submitted successfully! ID: {result.Id}, Status: {result.Status}";
-                // Reset is tricky with SupplyParameterFromForm, but for now it's fine
+                await LoadLoans();
             }
             else
             {

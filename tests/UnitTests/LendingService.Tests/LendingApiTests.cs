@@ -80,6 +80,28 @@ public class LendingApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(loan);
         Assert.Equal(createdLoan.Id, loan.Id);
     }
+
+    [Fact]
+    public async Task GetLoansByUser_ReturnsList_WhenUserHasLoans()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var userId = $"user_{Guid.NewGuid()}";
+        
+        // Create 2 loans
+        await client.PostAsJsonAsync("/loans", new { UserId = userId, Amount = 100.00m, Currency = "USD" });
+        await client.PostAsJsonAsync("/loans", new { UserId = userId, Amount = 200.00m, Currency = "USD" });
+
+        // Act
+        var response = await client.GetAsync($"/loans/user/{userId}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var loans = await response.Content.ReadFromJsonAsync<List<LoanResponse>>();
+        Assert.NotNull(loans);
+        Assert.Equal(2, loans.Count);
+        Assert.All(loans, l => Assert.Equal(userId, l.UserId));
+    }
 }
 
 public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status);

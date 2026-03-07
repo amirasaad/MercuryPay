@@ -52,4 +52,39 @@ public class LendingApiClientTests
         Assert.Equal(expectedResponse.Id, result.Id);
         Assert.Equal(expectedResponse.Status, result.Status);
     }
+
+    [Fact]
+    public async Task GetLoansAsync_ShouldReturnList_WhenApiReturnsSuccess()
+    {
+        // Arrange
+        var userId = "user1";
+        var expectedLoans = new List<LoanResponseModel>
+        {
+            new(Guid.NewGuid(), userId, 1000m, "USD", "Pending"),
+            new(Guid.NewGuid(), userId, 2000m, "USD", "Approved")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => 
+                    req.Method == HttpMethod.Get && 
+                    req.RequestUri!.ToString().Contains($"/loans/user/{userId}")),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(expectedLoans))
+            });
+
+        // Act
+        var result = await _client.GetLoansAsync(userId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.All(result, l => Assert.Equal(userId, l.UserId));
+    }
 }
