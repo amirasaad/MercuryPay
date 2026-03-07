@@ -32,7 +32,7 @@ public static class Extensions
         }
 
         // Prevent mapping "sub" claim to nameidentifier.
-        JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
+        // JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -53,6 +53,8 @@ public static class Extensions
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        builder.AddDefaultAuthentication();
+
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();

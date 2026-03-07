@@ -1,7 +1,12 @@
 @page "/loans"
 @using MercuryPay.Web
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
 @inject LendingApiClient LendingApi
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Apply for Loan</PageTitle>
 
@@ -90,46 +95,50 @@ else
     private LoanViewModel? loanModel { get; set; }
     
     private List<LoanResponseModel>? userLoans;
-    private const string UserId = "user_web_1";
+    private string? userId;
     private string? successMessage;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        loanModel ??= new();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        loanModel ??= new LoanViewModel();
         await LoadLoans();
     }
 
-    private string GetStatusBadgeClass(string status) => status switch
-    {
-        "Approved" => "bg-success",
-        "Pending" => "bg-warning text-dark",
-        "Rejected" => "bg-danger",
-        "Paid" => "bg-primary",
-        "DisbursementFailed" => "bg-danger",
-        _ => "bg-secondary"
-    };
-
     private async Task LoadLoans()
     {
-        userLoans = await LendingApi.GetLoansAsync(UserId);
+        try
+        {
+            userLoans = await LendingApi.GetMyLoansAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading loans: {ex.Message}";
+        }
     }
 
     private async Task HandleSubmit()
     {
+        successMessage = null;
+        errorMessage = null;
+
         if (loanModel!.Amount <= 0)
         {
+            errorMessage = "Amount must be positive.";
             return;
         }
 
-        var request = new LoanRequestModel(UserId, loanModel.Amount, loanModel.Currency);
-        var response = await LendingApi.CreateLoanAsync(request);
+        var request = new LoanRequestModel(userId ?? "unknown", loanModel.Amount, loanModel.Currency);
+        var result = await LendingApi.CreateLoanAsync(request);
 
-        if (response != null)
+        if (result != null)
         {
             successMessage = "Loan application submitted successfully!";
+            loanModel = new LoanViewModel(); // Reset form
             await LoadLoans();
-            loanModel = new(); 
         }
         else
         {
@@ -139,17 +148,33 @@ else
 
     private async Task RetryDisbursement(Guid loanId)
     {
-        var success = await LendingApi.RetryLoanDisbursementAsync(loanId);
-        if (success)
+        try
         {
-             successMessage = "Disbursement retry initiated.";
-             await LoadLoans();
+            var success = await LendingApi.RetryLoanDisbursementAsync(loanId);
+            if (success)
+            {
+                successMessage = "Retry initiated successfully.";
+                await LoadLoans();
+            }
+            else
+            {
+                errorMessage = "Retry failed.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            errorMessage = "Failed to retry disbursement.";
+            errorMessage = $"Error retrying: {ex.Message}";
         }
     }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Approved" => "bg-success",
+        "Rejected" => "bg-danger",
+        "DisbursementFailed" => "bg-warning text-dark",
+        "Processing" => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
 
     public class LoanViewModel
     {

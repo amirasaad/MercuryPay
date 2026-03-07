@@ -57,6 +57,27 @@ public class LoansController(ILendingService lendingService) : ControllerBase
         ));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetMyLoans()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var loans = await _lendingService.GetLoansByUser(userId);
+        
+        return Ok(loans.Select(loan => new LoanResponse(
+            loan.Id,
+            loan.UserId,
+            loan.Amount,
+            loan.Currency,
+            loan.Status,
+            loan.CreatedAt
+        )));
+    }
+
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetByUser(string userId)
     {

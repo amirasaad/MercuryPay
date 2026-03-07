@@ -29,11 +29,22 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
 
         if (fromWallet == null)
         {
-            // Should publish PaymentFailed?
-            _logger.LogWarning("Sender wallet not found for user {UserId} with currency {Currency}. Payment {PaymentId} cannot be processed.", 
-                message.FromUserId, message.Currency, message.PaymentId);
-            // For now, log and return. In real app, we need to handle this.
-            return;
+            if (message.FromUserId == "LendingService")
+            {
+                _logger.LogInformation("Auto-provisioning system wallet for LendingService");
+                fromWallet = new Wallet(Guid.NewGuid(), message.FromUserId, message.Currency);
+                // Seed with initial capital for lending
+                fromWallet.Credit(10000000, "System", "Initial Capital");
+                _context.Wallets.Add(fromWallet);
+            }
+            else
+            {
+                // Should publish PaymentFailed?
+                _logger.LogWarning("Sender wallet not found for user {UserId} with currency {Currency}. Payment {PaymentId} cannot be processed.", 
+                    message.FromUserId, message.Currency, message.PaymentId);
+                // For now, log and return. In real app, we need to handle this.
+                return;
+            }
         }
         
         if (toWallet == null)

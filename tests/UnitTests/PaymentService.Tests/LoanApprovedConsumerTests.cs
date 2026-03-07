@@ -2,6 +2,7 @@ using MassTransit;
 using MercuryPay.BuildingBlocks.Events;
 using MercuryPay.PaymentService.Consumers;
 using MercuryPay.PaymentService.Infrastructure;
+using MercuryPay.PaymentService.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -13,6 +14,8 @@ public class LoanApprovedConsumerTests
 {
     private readonly PaymentDbContext _dbContext;
     private readonly Mock<ILogger<LoanApprovedConsumer>> _loggerMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
+    private readonly Mock<ILogger<MercuryPay.PaymentService.Services.PaymentService>> _paymentServiceLoggerMock;
     private readonly LoanApprovedConsumer _consumer;
 
     public LoanApprovedConsumerTests()
@@ -22,7 +25,11 @@ public class LoanApprovedConsumerTests
             .Options;
         _dbContext = new PaymentDbContext(options);
         _loggerMock = new Mock<ILogger<LoanApprovedConsumer>>();
-        _consumer = new LoanApprovedConsumer(_dbContext, _loggerMock.Object);
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _paymentServiceLoggerMock = new Mock<ILogger<MercuryPay.PaymentService.Services.PaymentService>>();
+
+        var paymentService = new MercuryPay.PaymentService.Services.PaymentService(_dbContext, _publishEndpointMock.Object, _paymentServiceLoggerMock.Object);
+        _consumer = new LoanApprovedConsumer(paymentService, _loggerMock.Object);
     }
 
     [Fact]
@@ -45,6 +52,6 @@ public class LoanApprovedConsumerTests
         var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.ToUserId == userId && p.Amount == amount);
         Assert.NotNull(payment);
         Assert.Equal("LendingService", payment.FromUserId);
-        Assert.Equal("Completed", payment.Status);
+        Assert.Equal("Pending", payment.Status);
     }
 }

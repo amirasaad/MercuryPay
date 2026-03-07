@@ -10,9 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Add Authentication
-builder.AddDefaultAuthentication();
-
 // Add Database Context
 var connectionString = builder.Configuration.GetConnectionString("walletdb");
 if (string.IsNullOrEmpty(connectionString))

@@ -52,6 +52,7 @@
       "clientId": "web-app",
       "enabled": true,
       "publicClient": true,
+      "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "redirectUris": [
         "*"

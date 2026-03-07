@@ -18,10 +18,16 @@ public class LendingApiClient(HttpClient httpClient)
         return null;
     }
 
+    public async Task<List<LoanResponseModel>> GetMyLoansAsync(CancellationToken cancellationToken = default)
+    {
+        return await _httpClient.GetFromJsonAsync<List<LoanResponseModel>>("/loans", cancellationToken) 
+               ?? [];
+    }
+
     public async Task<List<LoanResponseModel>> GetLoansAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _httpClient.GetFromJsonAsync<List<LoanResponseModel>>($"/loans/user/{userId}", cancellationToken) 
-               ?? new List<LoanResponseModel>();
+               ?? [];
     }
 
     public async Task<bool> RetryLoanDisbursementAsync(Guid loanId, CancellationToken cancellationToken = default)
