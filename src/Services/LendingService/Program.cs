@@ -2,13 +2,19 @@ using MercuryPay.LendingService.Controllers;
 using MercuryPay.LendingService.Infrastructure;
 using MercuryPay.LendingService.Services;
 using MercuryPay.LendingService.Consumers;
+using MercuryPay.LendingService.Metrics;
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+
+// Add custom metrics
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(LendingServiceMetrics.MeterName));
 
 // Add Event Bus
 builder.AddEventBus(x => 
