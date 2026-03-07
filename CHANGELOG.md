@@ -1,5 +1,36 @@
 <a name="1.0.0"></a>
 <a name="1.1.0"></a>
+<a name="1.2.0"></a>
+# [1.2.0](https://github.com/user/MercuryPay/compare/v1.1.0...v1.2.0) (2026-03-07)
+
+
+### ♻️ Code Refactoring
+
+* add structured logging to services and consumers ([0b93d7c](https://github.com/user/MercuryPay/commit/0b93d7c))
+
+
+### ✅ Tests
+
+* **e2e:** add integration tests and improve service startup ([9ead962](https://github.com/user/MercuryPay/commit/9ead962))
+
+
+### ✨ Features
+
+* implement outbox pattern and fix ef core integration ([e9a4839](https://github.com/user/MercuryPay/commit/e9a4839))
+* **lending:** add user loans history endpoint and ui ([6b3ab29](https://github.com/user/MercuryPay/commit/6b3ab29))
+* **lending:** implement lending service with TDD and documentation ([7fd7e9e](https://github.com/user/MercuryPay/commit/7fd7e9e))
+* **web:** implement loan application page and lending client ([70e1fe9](https://github.com/user/MercuryPay/commit/70e1fe9))
+
+
+### 🐛 Bug Fixes
+
+* **deps:** downgrade MassTransit to v8.3.4 :key: ([a6b9b89](https://github.com/user/MercuryPay/commit/a6b9b89))
+
+
+### 📝 Documentation
+
+* update design docs and add development process guidelines ([7229fda](https://github.com/user/MercuryPay/commit/7229fda))
+
 # [1.1.0](https://github.com/user/MercuryPay/compare/v1.0.0...v1.1.0) (2026-03-07)
 
 
