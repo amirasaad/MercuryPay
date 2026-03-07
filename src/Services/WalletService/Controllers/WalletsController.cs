@@ -22,6 +22,19 @@ public class WalletsController(IWalletService walletService) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = wallet.Id }, wallet);
     }
 
+    [HttpGet]
+    public IActionResult GetWallets()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return BadRequest("User ID not found in token");
+        }
+
+        var wallets = _walletService.GetWalletsByUserId(userId);
+        return Ok(wallets);
+    }
+
     [HttpGet("{id}")]
     public IActionResult Get(Guid id)
     {

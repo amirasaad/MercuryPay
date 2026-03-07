@@ -1,7 +1,75 @@
 @page "/wallets"
 @attribute [Authorize]
+@inject HttpClient Http
 
 <PageTitle>Wallets - MercuryPay</PageTitle>
 
-<h1>My Wallets</h1>
-<p>Wallet management coming soon...</p>
+<div class="container mt-4">
+    <h1>My Wallets</h1>
+    
+    @if (wallets == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!wallets.Any())
+    {
+        <div class="alert alert-info">
+            You don't have any wallets yet. Create one to get started!
+        </div>
+        <button class="btn btn-primary" @onclick="CreateWallet">Create USD Wallet</button>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var wallet in wallets)
+            {
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">@wallet.Currency Wallet</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@wallet.Id</h6>
+                            <p class="card-text display-4">@wallet.Balance.ToString("C")</p>
+                            <a href="#" class="card-link">View Transactions</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Wallet>? wallets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            wallets = await Http.GetFromJsonAsync<List<Wallet>>("https://walletservice/wallets");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching wallets: {ex.Message}");
+            wallets = new List<Wallet>();
+        }
+    }
+
+    private async Task CreateWallet()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("https://walletservice/wallets", new { UserId = "current-user", Currency = "USD" });
+            if (response.IsSuccessStatusCode)
+            {
+                // Refresh list
+                wallets = await Http.GetFromJsonAsync<List<Wallet>>("https://walletservice/wallets");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating wallet: {ex.Message}");
+        }
+    }
+
+    public record Wallet(Guid Id, string UserId, string Currency, decimal Balance);
+}

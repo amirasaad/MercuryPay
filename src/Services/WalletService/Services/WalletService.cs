@@ -8,6 +8,7 @@ public interface IWalletService
 {
     Wallet CreateWallet(string userId, string currency);
     Wallet? GetWallet(Guid id);
+    IEnumerable<Wallet> GetWalletsByUserId(string userId);
     void CreditWallet(Guid id, decimal amount);
 }
 
@@ -15,6 +16,14 @@ public class WalletService(WalletDbContext context, ILogger<WalletService> logge
 {
     private readonly WalletDbContext _context = context;
     private readonly ILogger<WalletService> _logger = logger;
+
+    public IEnumerable<Wallet> GetWalletsByUserId(string userId)
+    {
+        return _context.Wallets
+            .Where(w => w.UserId == userId)
+            .Select(w => new Wallet(w.Id, w.UserId, w.Currency, w.Balance))
+            .ToList();
+    }
 
     public Wallet CreateWallet(string userId, string currency)
     {
