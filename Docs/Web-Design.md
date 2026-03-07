@@ -6,6 +6,7 @@ The MercuryPay Web Frontend provides a user interface for interacting with the b
 
 ## 2. User Stories
 
+- **US-WEB-00**: As a user, I want to log in using my credentials so that I can securely access my personal data.
 - **US-WEB-01**: As a user, I want to see a Dashboard with an overview of my financial status.
 - **US-WEB-02**: As a user, I want to navigate to a "Wallets" page to manage my funds.
 - **US-WEB-03**: As a user, I want to navigate to a "Payments" page to send money.
@@ -49,7 +50,8 @@ The frontend communicates with the `LendingService` via `HttpClient`.
 
 | Requirement ID | Description | Test Case ID | Status |
 | --- | --- | --- | --- |
-| REQ-WEB-001 | User can navigate to the Dashboard. | TEST-E2E-HOME-001 | Implemented |
+| REQ-WEB-000 | User can log in with valid credentials. | TEST-E2E-LOGIN-001 | Passed |
+| REQ-WEB-001 | User can navigate to the Dashboard. | TEST-E2E-HOME-001 | Passed |
 | REQ-WEB-002 | User can navigate to the Wallets page. | TEST-WEB-UI-002 | Pending |
 | REQ-WEB-003 | User can navigate to the Payments page. | TEST-WEB-UI-003 | Pending |
 | REQ-WEB-004 | User can navigate to the Loans page. | TEST-WEB-UI-004 | Implemented |
@@ -67,10 +69,13 @@ The frontend communicates with the `LendingService` via `HttpClient`.
 ## 7. Testing Strategy
 
 ### Unit Tests
+
 - `LendingApiClientTests`: Verify HTTP requests are formed correctly and responses are parsed.
 - Mock `HttpMessageHandler` to simulate backend responses.
 
 ### E2E Tests (Playwright)
+
 - Located in `tests/E2E/MercuryPay.E2E.Tests`.
 - Verifies full user flows against the running Aspire AppHost.
 - **HomePageTests**: Verifies the dashboard loads and displays the welcome message.
+- **LoginTests**: Verifies the login flow via Keycloak.
