@@ -83,4 +83,6 @@ For the full project requirements and traceability matrix, please refer to [Requ
 ## 6. Architecture
 
 - **Layered Architecture**: Controller -> Service -> Domain -> Infrastructure (Repository).
-- **Persistence**: In-memory ConcurrentDictionary (for prototype).
+- **Persistence**: Database-per-service using **Entity Framework Core**.
+- **Messaging**: **MassTransit** consumer for `PaymentCreated` events.
+- **Reliability**: Idempotent event processing to handle duplicate messages.

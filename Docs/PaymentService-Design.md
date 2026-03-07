@@ -76,4 +76,6 @@ For the full project requirements and traceability matrix, please refer to [Requ
 ## 6. Architecture
 
 - **Layered Architecture**: Controller -> Service -> Domain -> Infrastructure (Repository).
-- **Persistence**: Database-per-service (PostgreSQL - mocked for now).
+- **Persistence**: Database-per-service using **Entity Framework Core** (PostgreSQL).
+- **Messaging**: **MassTransit** for asynchronous event publishing.
+- **Reliability**: **Transactional Outbox Pattern** ensures atomic database updates and event publishing to avoid data inconsistency (dual-write problem).
