@@ -1,10 +1,42 @@
 using MercuryPay.PaymentService.Services;
+using MercuryPay.PaymentService.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using MassTransit;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
-builder.AddEventBus();
+
+// Add Database Context
+var connectionString = builder.Configuration.GetConnectionString("paymentdb");
+if (string.IsNullOrEmpty(connectionString))
+{
+    builder.Services.AddDbContext<PaymentDbContext>(options =>
+        options.UseInMemoryDatabase("PaymentDb"));
+}
+else
+{
+    builder.AddNpgsqlDbContext<PaymentDbContext>("paymentdb", settings => 
+        settings.DisableRetry = true); // Disable retry as Outbox handles it
+}
+
+// Add Event Bus with Outbox configuration
+builder.AddEventBus((x) =>
+{
+    // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus extension
+    
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+        {
+            o.QueryDelay = TimeSpan.FromSeconds(1);
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+    }
+});
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
@@ -16,6 +48,14 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Auto-migrate database (for development simplicity)
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    db.Database.EnsureCreated();
+}
+
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
@@ -26,29 +66,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
-
-app.MapGet("/", () => "API service is running. Navigate to /weatherforecast to see sample data.");
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapGet("/", () => "Payment Service is running.");
 
 app.MapDefaultEndpoints();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

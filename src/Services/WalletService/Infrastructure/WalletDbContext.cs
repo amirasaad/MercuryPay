@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MercuryPay.WalletService.Domain;
+using MassTransit;
 
 namespace MercuryPay.WalletService.Infrastructure;
 
@@ -21,5 +22,10 @@ public class WalletDbContext(DbContextOptions<WalletDbContext> options) : DbCont
             
         modelBuilder.Entity<LedgerEntry>().HasKey(l => l.Id);
         modelBuilder.Entity<LedgerEntry>().Property(l => l.Id).ValueGeneratedNever();
+
+        // Configure MassTransit Outbox entities
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

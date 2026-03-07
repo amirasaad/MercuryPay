@@ -1,7 +1,9 @@
-using System.Collections.Concurrent;
+using MercuryPay.BuildingBlocks.Events;
 using MercuryPay.PaymentService.Models;
 using MassTransit;
-using MercuryPay.BuildingBlocks.Events;
+using MercuryPay.PaymentService.Infrastructure;
+using MercuryPay.PaymentService.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace MercuryPay.PaymentService.Services;
 
@@ -11,9 +13,9 @@ public interface IPaymentService
     Task<PaymentResponse?> GetPayment(Guid id);
 }
 
-public class PaymentService(IPublishEndpoint publishEndpoint) : IPaymentService
+public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEndpoint) : IPaymentService
 {
-    private static readonly ConcurrentDictionary<Guid, PaymentResponse> _payments = new();
+    private readonly PaymentDbContext _context = context;
     private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
 
     public async Task<PaymentResponse> CreatePayment(PaymentRequest request)
@@ -23,32 +25,47 @@ public class PaymentService(IPublishEndpoint publishEndpoint) : IPaymentService
             throw new ArgumentException("Amount must be positive");
         }
 
-        var response = new PaymentResponse(
-            Guid.NewGuid(),
-            "Pending",
+        var paymentId = NewId.NextGuid();
+        var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending");
+
+        _context.Payments.Add(payment);
+        
+        // Publish event (will be captured by Outbox)
+        await _publishEndpoint.Publish(new PaymentCreated(
+            paymentId,
+            request.FromUserId,
+            request.ToUserId,
             request.Amount,
             request.Currency,
-            request.FromUserId,
-            request.ToUserId
-        );
-
-        _payments[response.Id] = response;
-
-        await _publishEndpoint.Publish(new PaymentCreated(
-            response.Id,
-            response.FromUserId,
-            response.ToUserId,
-            response.Amount,
-            response.Currency,
             DateTimeOffset.UtcNow
         ));
 
-        return response;
+        // Save changes (commits both Payment entity and Outbox message atomically)
+        await _context.SaveChangesAsync();
+
+        return new PaymentResponse(
+            payment.Id,
+            payment.Status,
+            payment.Amount,
+            payment.Currency,
+            payment.FromUserId,
+            payment.ToUserId
+        );
     }
 
-    public Task<PaymentResponse?> GetPayment(Guid id)
+    public async Task<PaymentResponse?> GetPayment(Guid id)
     {
-        _payments.TryGetValue(id, out var payment);
-        return Task.FromResult(payment);
+        var payment = await _context.Payments.FindAsync(id);
+        
+        if (payment == null) return null;
+
+        return new PaymentResponse(
+            payment.Id,
+            payment.Status,
+            payment.Amount,
+            payment.Currency,
+            payment.FromUserId,
+            payment.ToUserId
+        );
     }
 }

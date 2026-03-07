@@ -126,6 +126,6 @@ public class PaymentCreatedConsumerTests : IDisposable
         
         // Check ledger entries count
         Assert.Equal(2, updatedFromWallet.Ledger.Count); // INIT + 1 Debit
-        Assert.Equal(1, updatedToWallet.Ledger.Count);   // 1 Credit
+        Assert.Single(updatedToWallet.Ledger);   // 1 Credit
     }
 }

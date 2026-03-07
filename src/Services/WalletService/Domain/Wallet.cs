@@ -1,14 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace MercuryPay.WalletService.Domain;
 
 public class Wallet
 {
     public Guid Id { get; private set; }
     public string UserId { get; private set; }
-    public string Currency { get; private set; }
     public decimal Balance { get; private set; }
-
-    private readonly List<LedgerEntry> _ledger = new();
-    public IReadOnlyCollection<LedgerEntry> Ledger => _ledger.AsReadOnly();
+    public string Currency { get; private set; }
+    
+    // EF Core navigation property
+    public virtual ICollection<LedgerEntry> Ledger { get; private set; } = new List<LedgerEntry>();
 
     public Wallet(Guid id, string userId, string currency)
     {
@@ -19,14 +23,18 @@ public class Wallet
     }
 
     // Required for EF Core
-    private Wallet() { }
+    private Wallet() 
+    {
+        UserId = default!;
+        Currency = default!;
+    }
 
     public void Credit(decimal amount, string transactionId, string description)
     {
         if (amount <= 0) throw new ArgumentException("Amount must be positive");
-        if (_ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
+        if (Ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
 
-        _ledger.Add(new LedgerEntry(
+        Ledger.Add(new LedgerEntry(
             Guid.NewGuid(),
             Id,
             amount,
@@ -41,10 +49,10 @@ public class Wallet
     public void Debit(decimal amount, string transactionId, string description)
     {
         if (amount <= 0) throw new ArgumentException("Amount must be positive");
-        if (_ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
+        if (Ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
         if (Balance < amount) throw new InvalidOperationException("Insufficient funds");
 
-        _ledger.Add(new LedgerEntry(
+        Ledger.Add(new LedgerEntry(
             Guid.NewGuid(),
             Id,
             -amount,
@@ -77,5 +85,9 @@ public class LedgerEntry
     }
 
     // Required for EF Core
-    private LedgerEntry() { }
+    private LedgerEntry() 
+    {
+        TransactionId = default!;
+        Description = default!;
+    }
 }
