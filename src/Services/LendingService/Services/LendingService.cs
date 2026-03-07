@@ -10,6 +10,7 @@ public interface ILendingService
     Task<Loan> CreateLoan(string userId, decimal amount, string currency);
     Task<Loan?> GetLoan(Guid id);
     Task<List<Loan>> GetLoansByUser(string userId);
+    Task<bool> RetryDisbursement(Guid loanId);
 }
 
 public class LendingService(LendingDbContext context, ILogger<LendingService> logger, IPublishEndpoint publishEndpoint) : ILendingService
@@ -54,5 +55,37 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
     {
         return await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
             System.Linq.Queryable.Where(_context.Loans, l => l.UserId == userId));
+    }
+
+    public async Task<bool> RetryDisbursement(Guid loanId)
+    {
+        var loan = await _context.Loans.FindAsync(loanId);
+        if (loan == null)
+        {
+            _logger.LogWarning("Loan {LoanId} not found for retry", loanId);
+            return false;
+        }
+
+        if (loan.Status != "DisbursementFailed")
+        {
+            _logger.LogWarning("Loan {LoanId} status is {Status}, cannot retry disbursement", loanId, loan.Status);
+            return false;
+        }
+
+        loan.RetryDisbursement();
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Retrying disbursement for Loan {LoanId}", loanId);
+
+        // Publish LoanApproved event again
+        await _publishEndpoint.Publish(new LoanApproved(
+            loan.Id,
+            loan.UserId,
+            loan.Amount,
+            loan.Currency,
+            DateTimeOffset.UtcNow
+        ));
+
+        return true;
     }
 }

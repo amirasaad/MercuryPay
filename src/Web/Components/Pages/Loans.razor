@@ -68,15 +68,21 @@ else
                     <td>@loan.Amount</td>
                     <td>@loan.Currency</td>
                     <td>
-                        <span class="badge @GetStatusBadgeClass(loan.Status)">
-                            @loan.Status
-                        </span>
-                    </td>
-                    <td>@loan.CreatedAt.ToLocalTime().ToString("g")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    <span class="badge @GetStatusBadgeClass(loan.Status)">
+                        @loan.Status
+                    </span>
+                    @if (loan.Status == "DisbursementFailed")
+                    {
+                        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => RetryDisbursement(loan.Id)">
+                            Retry
+                        </button>
+                    }
+                </td>
+                <td>@loan.CreatedAt.ToLocalTime().ToString("g")</td>
+            </tr>
+        }
+    </tbody>
+</table>
 }
 
 @code {
@@ -85,6 +91,8 @@ else
     
     private List<LoanResponseModel>? userLoans;
     private const string UserId = "user_web_1";
+    private string? successMessage;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,50 +106,48 @@ else
         "Pending" => "bg-warning text-dark",
         "Rejected" => "bg-danger",
         "Paid" => "bg-primary",
+        "DisbursementFailed" => "bg-danger",
         _ => "bg-secondary"
     };
 
     private async Task LoadLoans()
     {
-        try
-        {
-            userLoans = await LendingApi.GetLoansAsync(UserId);
-        }
-        catch (Exception)
-        {
-            userLoans = new List<LoanResponseModel>();
-        }
+        userLoans = await LendingApi.GetLoansAsync(UserId);
     }
-
-    private string? successMessage;
-    private string? errorMessage;
 
     private async Task HandleSubmit()
     {
-        successMessage = null;
-        errorMessage = null;
-
-        if (loanModel is null) return;
-
-        try
+        if (loanModel!.Amount <= 0)
         {
-            // Hardcoded user ID for now as we don't have auth context in this demo
-            var request = new LoanRequestModel(UserId, loanModel.Amount, loanModel.Currency);
-            var result = await LendingApi.CreateLoanAsync(request);
-            
-            if (result != null)
-            {
-                successMessage = $"Loan application submitted successfully! ID: {result.Id}, Status: {result.Status}";
-                await LoadLoans();
-            }
-            else
-            {
-                errorMessage = "Failed to submit loan application.";
-            }
+            return;
         }
-        catch (Exception ex)
+
+        var request = new LoanRequestModel(UserId, loanModel.Amount, loanModel.Currency);
+        var response = await LendingApi.CreateLoanAsync(request);
+
+        if (response != null)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            successMessage = "Loan application submitted successfully!";
+            await LoadLoans();
+            loanModel = new(); 
+        }
+        else
+        {
+            errorMessage = "Failed to submit loan application.";
+        }
+    }
+
+    private async Task RetryDisbursement(Guid loanId)
+    {
+        var success = await LendingApi.RetryLoanDisbursementAsync(loanId);
+        if (success)
+        {
+             successMessage = "Disbursement retry initiated.";
+             await LoadLoans();
+        }
+        else
+        {
+            errorMessage = "Failed to retry disbursement.";
         }
     }
 

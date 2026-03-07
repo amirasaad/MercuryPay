@@ -23,6 +23,12 @@ public class LendingApiClient(HttpClient httpClient)
         return await _httpClient.GetFromJsonAsync<List<LoanResponseModel>>($"/loans/user/{userId}", cancellationToken) 
                ?? new List<LoanResponseModel>();
     }
+
+    public async Task<bool> RetryLoanDisbursementAsync(Guid loanId, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsync($"/loans/{loanId}/retry", null, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
 }
 
 public record LoanRequestModel(string UserId, decimal Amount, string Currency);

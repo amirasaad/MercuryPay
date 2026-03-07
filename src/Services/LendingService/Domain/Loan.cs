@@ -13,4 +13,9 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
     {
         Status = "DisbursementFailed";
     }
+
+    public void RetryDisbursement()
+    {
+        Status = "Approved";
+    }
 }

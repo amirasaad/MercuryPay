@@ -63,6 +63,19 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.CreatedAt
         )));
     }
+
+    [HttpPost("{id}/retry")]
+    public async Task<IActionResult> RetryDisbursement(Guid id)
+    {
+        var result = await _lendingService.RetryDisbursement(id);
+        
+        if (!result)
+        {
+            return BadRequest("Cannot retry disbursement. Loan not found or status is not DisbursementFailed.");
+        }
+
+        return Ok("Disbursement retry initiated.");
+    }
 }
 
 public record CreateLoanRequest(string UserId, decimal Amount, string Currency);
