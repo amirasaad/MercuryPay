@@ -104,4 +104,4 @@ public class LendingApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 }
 
-public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status);
+public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt);

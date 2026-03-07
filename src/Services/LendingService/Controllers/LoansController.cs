@@ -24,7 +24,8 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.UserId,
             loan.Amount,
             loan.Currency,
-            loan.Status
+            loan.Status,
+            loan.CreatedAt
         ));
     }
 
@@ -43,7 +44,8 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.UserId,
             loan.Amount,
             loan.Currency,
-            loan.Status
+            loan.Status,
+            loan.CreatedAt
         ));
     }
 
@@ -57,10 +59,11 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.UserId,
             loan.Amount,
             loan.Currency,
-            loan.Status
+            loan.Status,
+            loan.CreatedAt
         )));
     }
 }
 
 public record CreateLoanRequest(string UserId, decimal Amount, string Currency);
-public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status);
+public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt);

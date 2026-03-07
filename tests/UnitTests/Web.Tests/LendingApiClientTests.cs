@@ -27,7 +27,7 @@ public class LendingApiClientTests
     {
         // Arrange
         var request = new LoanRequestModel("user1", 1000m, "USD");
-        var expectedResponse = new LoanResponseModel(Guid.NewGuid(), "user1", 1000m, "USD", "Pending");
+        var expectedResponse = new LoanResponseModel(Guid.NewGuid(), "user1", 1000m, "USD", "Pending", DateTime.UtcNow);
 
         _httpMessageHandlerMock
             .Protected()
@@ -60,8 +60,8 @@ public class LendingApiClientTests
         var userId = "user1";
         var expectedLoans = new List<LoanResponseModel>
         {
-            new(Guid.NewGuid(), userId, 1000m, "USD", "Pending"),
-            new(Guid.NewGuid(), userId, 2000m, "USD", "Approved")
+            new(Guid.NewGuid(), userId, 1000m, "USD", "Pending", DateTime.UtcNow),
+            new(Guid.NewGuid(), userId, 2000m, "USD", "Approved", DateTime.UtcNow)
         };
 
         _httpMessageHandlerMock

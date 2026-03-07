@@ -57,6 +57,7 @@ else
                 <th>Amount</th>
                 <th>Currency</th>
                 <th>Status</th>
+                <th>Date</th>
             </tr>
         </thead>
         <tbody>
@@ -66,7 +67,12 @@ else
                     <td>@loan.Id</td>
                     <td>@loan.Amount</td>
                     <td>@loan.Currency</td>
-                    <td>@loan.Status</td>
+                    <td>
+                        <span class="badge @GetStatusBadgeClass(loan.Status)">
+                            @loan.Status
+                        </span>
+                    </td>
+                    <td>@loan.CreatedAt.ToLocalTime().ToString("g")</td>
                 </tr>
             }
         </tbody>
@@ -85,6 +91,15 @@ else
         loanModel ??= new();
         await LoadLoans();
     }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Approved" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Rejected" => "bg-danger",
+        "Paid" => "bg-primary",
+        _ => "bg-secondary"
+    };
 
     private async Task LoadLoans()
     {

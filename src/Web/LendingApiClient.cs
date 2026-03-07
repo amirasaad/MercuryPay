@@ -26,4 +26,4 @@ public class LendingApiClient(HttpClient httpClient)
 }
 
 public record LoanRequestModel(string UserId, decimal Amount, string Currency);
-public record LoanResponseModel(Guid Id, string UserId, decimal Amount, string Currency, string Status);
+public record LoanResponseModel(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt);
