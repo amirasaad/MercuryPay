@@ -1,39 +1,37 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var messaging = builder.AddRabbitMQ("messaging")
-    .WithManagementPlugin();
-
 var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume()
     .WithPgAdmin();
 
 var paymentDb = postgres.AddDatabase("paymentdb");
 var walletDb = postgres.AddDatabase("walletdb");
+var lendingDb = postgres.AddDatabase("lendingdb");
+
+var rabbitmq = builder.AddRabbitMQ("rabbitmq")
+    .WithManagementPlugin();
 
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithReference(messaging)
     .WithReference(paymentDb)
-    .WaitFor(paymentDb)
-    .WithHttpHealthCheck("/health");
+    .WithReference(rabbitmq);
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithReference(messaging)
     .WithReference(walletDb)
-    .WaitFor(walletDb)
-    .WithHttpHealthCheck("/health");
+    .WithReference(rabbitmq);
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
-    .WithHttpHealthCheck("/health");
+    .WithReference(lendingDb)
+    .WithReference(rabbitmq);
 
-var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
-    .WithHttpHealthCheck("/health");
+builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
+    .WithReference(paymentService)
+    .WithReference(walletService)
+    .WithReference(lendingService);
 
 builder.AddProject<Projects.MercuryPay_Web>("webfrontend")
     .WithExternalHttpEndpoints()
-    .WithHttpHealthCheck("/health")
     .WithReference(paymentService)
     .WithReference(walletService)
-    .WaitFor(paymentService);
+    .WithReference(lendingService);
 
 builder.Build().Run();

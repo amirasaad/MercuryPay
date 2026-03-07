@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Services\WalletService\MercuryPay.WalletService.csproj" />
     <ProjectReference Include="..\Services\LendingService\MercuryPay.LendingService.csproj" />
     <ProjectReference Include="..\Services\RiskService\MercuryPay.RiskService.csproj" />
+    <ProjectReference Include="..\ApiGateway\MercuryPay.ApiGateway.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -23,4 +23,7 @@
     <Project Path="tests/UnitTests/PaymentService.Tests/MercuryPay.PaymentService.Tests.csproj" />
     <Project Path="tests/UnitTests/WalletService.Tests/MercuryPay.WalletService.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/UnitTests/LendingService.Tests/">
+    <Project Path="tests/UnitTests/LendingService.Tests/MercuryPay.LendingService.Tests.csproj" />
+  </Folder>
 </Solution>
