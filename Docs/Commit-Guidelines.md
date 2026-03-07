@@ -60,3 +60,27 @@ We use `husky` and `commitlint` to validate commit messages before they are crea
 ### CI/CD Pipeline
 
 The CI pipeline is configured to validate commit messages on Pull Requests. Ensure your PR title also follows this convention if you squash-merge.
+
+## Release & Versioning
+
+We use `standard-version` to automate the release process. This tool:
+
+1. Bumps the version in `package.json`.
+2. Generates/updates `CHANGELOG.md` based on your commit history.
+3. Creates a new git tag.
+
+### How to Release
+
+To create a new release:
+
+```bash
+npm run release
+```
+
+This will automatically determine the next version number (patch, minor, or major) based on your commit history (fix, feat, or breaking change).
+
+To push the new version and tag to the remote repository:
+
+```bash
+git push --follow-tags origin main
+```
