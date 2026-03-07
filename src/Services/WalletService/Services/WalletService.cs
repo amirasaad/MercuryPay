@@ -11,16 +11,21 @@ public interface IWalletService
     void CreditWallet(Guid id, decimal amount);
 }
 
-public class WalletService(WalletDbContext context) : IWalletService
+public class WalletService(WalletDbContext context, ILogger<WalletService> logger) : IWalletService
 {
     private readonly WalletDbContext _context = context;
+    private readonly ILogger<WalletService> _logger = logger;
 
     public Wallet CreateWallet(string userId, string currency)
     {
+        _logger.LogInformation("Creating wallet for user {UserId} with currency {Currency}", userId, currency);
+        
         var domainWallet = new DomainWallet(Guid.NewGuid(), userId, currency);
         
         _context.Wallets.Add(domainWallet);
         _context.SaveChanges();
+
+        _logger.LogInformation("Wallet {WalletId} created successfully", domainWallet.Id);
 
         return new Wallet(domainWallet.Id, domainWallet.UserId, domainWallet.Currency, domainWallet.Balance);
     }
@@ -31,6 +36,7 @@ public class WalletService(WalletDbContext context) : IWalletService
         
         if (domainWallet == null)
         {
+            _logger.LogWarning("Wallet {WalletId} not found", id);
             return null;
         }
 
@@ -39,10 +45,18 @@ public class WalletService(WalletDbContext context) : IWalletService
 
     public void CreditWallet(Guid id, decimal amount)
     {
+        _logger.LogInformation("Crediting wallet {WalletId} with amount {Amount}", id, amount);
+        
         var domainWallet = _context.Wallets.Find(id);
-        if (domainWallet == null) throw new KeyNotFoundException("Wallet not found");
+        if (domainWallet == null) 
+        {
+            _logger.LogWarning("Wallet {WalletId} not found for credit operation", id);
+            throw new KeyNotFoundException("Wallet not found");
+        }
 
         domainWallet.Credit(amount, Guid.NewGuid().ToString(), "Manual Credit");
         _context.SaveChanges();
+        
+        _logger.LogInformation("Wallet {WalletId} credited successfully. New Balance: {Balance}", id, domainWallet.Balance);
     }
 }

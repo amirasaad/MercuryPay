@@ -4,6 +4,7 @@ using MercuryPay.WalletService.Consumers;
 using MercuryPay.WalletService.Domain;
 using MercuryPay.WalletService.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace MercuryPay.WalletService.Tests.Consumers;
@@ -12,6 +13,7 @@ public class PaymentCreatedConsumerTests : IDisposable
 {
     private readonly WalletDbContext _context;
     private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
+    private readonly Mock<ILogger<PaymentCreatedConsumer>> _mockLogger;
     private readonly PaymentCreatedConsumer _consumer;
 
     public PaymentCreatedConsumerTests()
@@ -22,7 +24,8 @@ public class PaymentCreatedConsumerTests : IDisposable
         
         _context = new WalletDbContext(options);
         _mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        _consumer = new PaymentCreatedConsumer(_context, _mockPublishEndpoint.Object);
+        _mockLogger = new Mock<ILogger<PaymentCreatedConsumer>>();
+        _consumer = new PaymentCreatedConsumer(_context, _mockPublishEndpoint.Object, _mockLogger.Object);
     }
 
     public void Dispose()
