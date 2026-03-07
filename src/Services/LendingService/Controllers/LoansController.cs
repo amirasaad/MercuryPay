@@ -5,6 +5,7 @@ using System.Security.Claims;
 
 namespace MercuryPay.LendingService.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("loans")]
 public class LoansController(ILendingService lendingService) : ControllerBase
