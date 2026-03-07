@@ -27,7 +27,7 @@ public class LendingApiClientTests
     {
         // Arrange
         var request = new LoanRequestModel("user1", 1000m, "USD");
-        var expectedResponse = new LoanResponseModel(Guid.NewGuid(), "user1", 1000m, "USD", "Pending", DateTime.UtcNow);
+        var expectedResponse = new LoanResponseModel(Guid.NewGuid(), "user1", 1000m, "USD", "Approved", DateTime.UtcNow);
 
         _httpMessageHandlerMock
             .Protected()

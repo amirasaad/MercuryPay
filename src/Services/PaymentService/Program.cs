@@ -1,5 +1,6 @@
 using MercuryPay.PaymentService.Services;
 using MercuryPay.PaymentService.Infrastructure;
+using MercuryPay.PaymentService.Consumers;
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
 using Microsoft.Extensions.Hosting;
@@ -27,6 +28,8 @@ builder.AddEventBus((x) =>
 {
     // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus extension
     
+    x.AddConsumer<LoanApprovedConsumer>();
+
     if (!string.IsNullOrEmpty(connectionString))
     {
         x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>

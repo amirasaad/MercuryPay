@@ -30,7 +30,6 @@ The Payment Service is responsible for payment creation, authorization, capture,
 
 - **Endpoint**: `POST /payments`
 - **Request Body**:
-
   ```json
   {
     "amount": 100.00,
@@ -39,9 +38,7 @@ The Payment Service is responsible for payment creation, authorization, capture,
     "toUserId": "merchant_456"
   }
   ```
-
 - **Response**: `201 Created`
-
   ```json
   {
     "id": "guid",
@@ -63,7 +60,14 @@ The Payment Service is responsible for payment creation, authorization, capture,
   ```
 - **Response**: `404 Not Found`
 
-## 5. Requirements Traceability Matrix (RTM)
+## 5. Event Consumers
+
+### LoanApproved
+- **Source**: Lending Service
+- **Action**: Creates a payment from "LendingService" to the borrower (User).
+- **Status**: Completed (Immediate disbursement).
+
+## 6. Requirements Traceability Matrix (RTM)
 
 For the full project requirements and traceability matrix, please refer to [Requirements.md](./Requirements.md).
 

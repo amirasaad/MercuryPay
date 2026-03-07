@@ -31,7 +31,7 @@ The Lending Service is responsible for managing loan applications, approvals, an
 ### Events
 
 - **LoanCreated**: Published when a loan application is received.
-- **LoanApproved**: Published when a loan is approved.
+- **LoanApproved**: Published when a loan is approved. This event triggers the disbursement process in the Payment Service.
 - **LoanRepaid**: Published when a loan is fully repaid.
 
 ## 4. API Specification
@@ -54,7 +54,7 @@ The Lending Service is responsible for managing loan applications, approvals, an
   ```json
   {
     "id": "guid",
-    "status": "Pending",
+    "status": "Approved",
     "amount": 1000.00,
     ...
   }

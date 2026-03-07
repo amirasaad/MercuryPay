@@ -35,7 +35,7 @@ public class LendingApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(loan);
         Assert.Equal(request.UserId, loan.UserId);
         Assert.Equal(request.Amount, loan.Amount);
-        Assert.Equal("Pending", loan.Status);
+        Assert.Equal("Approved", loan.Status);
     }
 
     [Fact]

@@ -8,7 +8,7 @@ var paymentDb = postgres.AddDatabase("paymentdb");
 var walletDb = postgres.AddDatabase("walletdb");
 var lendingDb = postgres.AddDatabase("lendingdb");
 
-var rabbitmq = builder.AddRabbitMQ("rabbitmq")
+var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
 
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
