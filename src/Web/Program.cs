@@ -51,6 +51,12 @@ builder.Services.AddHttpClient<LendingApiClient>(client =>
     })
     .AddHttpMessageHandler<AuthorizationHeaderHandler>();
 
+builder.Services.AddHttpClient<WalletApiClient>(client =>
+    {
+        client.BaseAddress = new("https+http://walletservice");
+    })
+    .AddHttpMessageHandler<AuthorizationHeaderHandler>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

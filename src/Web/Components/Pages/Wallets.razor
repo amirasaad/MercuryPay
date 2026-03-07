@@ -1,6 +1,8 @@
 @page "/wallets"
+@using System.Security.Claims
 @attribute [Authorize]
-@inject HttpClient Http
+@inject WalletApiClient WalletApi
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Wallets - MercuryPay</PageTitle>
 
@@ -39,18 +41,22 @@
 </div>
 
 @code {
-    private List<Wallet>? wallets;
+    private List<WalletModel>? wallets;
+    private string? userId;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         try 
         {
-            wallets = await Http.GetFromJsonAsync<List<Wallet>>("https://walletservice/wallets");
+            wallets = await WalletApi.GetWalletsAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching wallets: {ex.Message}");
-            wallets = new List<Wallet>();
+            wallets = new List<WalletModel>();
         }
     }
 
@@ -58,11 +64,13 @@
     {
         try
         {
-            var response = await Http.PostAsJsonAsync("https://walletservice/wallets", new { UserId = "current-user", Currency = "USD" });
-            if (response.IsSuccessStatusCode)
+            var request = new CreateWalletRequest(userId ?? "unknown", "USD");
+            var createdWallet = await WalletApi.CreateWalletAsync(request);
+            
+            if (createdWallet != null)
             {
                 // Refresh list
-                wallets = await Http.GetFromJsonAsync<List<Wallet>>("https://walletservice/wallets");
+                wallets = await WalletApi.GetWalletsAsync();
             }
         }
         catch (Exception ex)
@@ -70,6 +78,4 @@
             Console.WriteLine($"Error creating wallet: {ex.Message}");
         }
     }
-
-    public record Wallet(Guid Id, string UserId, string Currency, decimal Balance);
 }
