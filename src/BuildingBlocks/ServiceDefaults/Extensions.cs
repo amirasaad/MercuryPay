@@ -5,6 +5,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ServiceDiscovery;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.JsonWebTokens;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -19,6 +21,35 @@ public static class Extensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
+
+    public static TBuilder AddDefaultAuthentication<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        var identitySection = builder.Configuration.GetSection("Identity");
+
+        if (!identitySection.Exists())
+        {
+            return builder;
+        }
+
+        // Prevent mapping "sub" claim to nameidentifier.
+        JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
+
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                var identityUrl = identitySection.GetValue<string>("Authority");
+                var audience = identitySection.GetValue<string>("Audience");
+
+                options.Authority = identityUrl;
+                options.Audience = audience;
+                options.TokenValidationParameters.ValidateAudience = false; 
+                options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+            });
+
+        builder.Services.AddAuthorization();
+
+        return builder;
+    }
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {

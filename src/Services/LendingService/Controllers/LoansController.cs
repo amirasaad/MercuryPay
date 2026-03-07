@@ -1,5 +1,7 @@
 using MercuryPay.LendingService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace MercuryPay.LendingService.Controllers;
 
@@ -17,7 +19,12 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             return BadRequest("Amount must be positive");
         }
 
-        var loan = await _lendingService.CreateLoan(request.UserId, request.Amount, request.Currency);
+        // Use authenticated user ID if available, otherwise fallback to request
+        var userId = User.Identity?.IsAuthenticated == true 
+            ? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? request.UserId 
+            : request.UserId;
+
+        var loan = await _lendingService.CreateLoan(userId, request.Amount, request.Currency);
         
         return CreatedAtAction(nameof(Get), new { id = loan.Id }, new LoanResponse(
             loan.Id,
@@ -75,6 +82,18 @@ public class LoansController(ILendingService lendingService) : ControllerBase
         }
 
         return Ok("Disbursement retry initiated.");
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public IActionResult GetMe()
+    {
+        return Ok(new
+        {
+            Id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+            Name = User.Identity?.Name,
+            Claims = User.Claims.Select(c => new { c.Type, c.Value })
+        });
     }
 }
 

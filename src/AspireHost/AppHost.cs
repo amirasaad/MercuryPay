@@ -11,17 +11,28 @@ var lendingDb = postgres.AddDatabase("lendingdb");
 var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
 
+var keycloak = builder.AddKeycloak("keycloak", 8080)
+    .WithDataVolume()
+    .WithRealmImport("./realms");
+
+var keycloakEndpoint = keycloak.GetEndpoint("http");
+
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
     .WithReference(paymentDb)
-    .WithReference(rabbitmq);
+    .WithReference(rabbitmq)
+    .WithReference(keycloak);
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
     .WithReference(walletDb)
-    .WithReference(rabbitmq);
+    .WithReference(rabbitmq)
+    .WithReference(keycloak);
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
     .WithReference(lendingDb)
-    .WithReference(rabbitmq);
+    .WithReference(rabbitmq)
+    .WithReference(keycloak)
+    .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
+    .WithEnvironment("Identity__Audience", "account");
 
 builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
     .WithReference(paymentService)
@@ -32,6 +43,7 @@ builder.AddProject<Projects.MercuryPay_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithReference(paymentService)
     .WithReference(walletService)
-    .WithReference(lendingService);
+    .WithReference(lendingService)
+    .WithReference(keycloak);
 
 builder.Build().Run();

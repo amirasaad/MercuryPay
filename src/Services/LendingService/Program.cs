@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
+// Add Authentication
+builder.AddDefaultAuthentication();
+
 // Add custom metrics
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics.AddMeter(LendingServiceMetrics.MeterName));
@@ -51,6 +54,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
