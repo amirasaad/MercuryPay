@@ -2,8 +2,8 @@ const czEmojiConfig = require('./node_modules/conventional-changelog-cz-emoji/in
 
 module.exports = czEmojiConfig.then(config => {
   // Override parserOpts to match "emoji type(scope): subject" format
-  config.parserOpts.headerPattern = /^(?:(?::\w*:|(?:\ud83c[\udf00-\udfff])|(?:\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55])\s)?(?<type>\w*)(?:\((?<scope>.*)\))?:\s(?<subject>.*)$/;
-  config.parserOpts.headerCorrespondence = ['type', 'scope', 'subject'];
+  config.parserOpts.headerPattern = /^(?<emoji>(?::\w*:|(?:\ud83c[\udf00-\udfff])|(?:\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55])\s)(?<type>\w*)(?:\((?<scope>.*)\))?:\s(?<subject>.*)$/;
+  config.parserOpts.headerCorrespondence = ['emoji', 'type', 'scope', 'subject'];
 
   // Override writerOpts transform to map text types (feat, fix) to emoji titles
   config.writerOpts.transform = (commit, context) => {
