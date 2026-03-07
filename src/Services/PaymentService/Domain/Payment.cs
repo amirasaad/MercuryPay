@@ -23,6 +23,16 @@ public class Payment
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
+    public void Approve()
+    {
+        Status = "Approved";
+    }
+
+    public void Reject(string reason)
+    {
+        Status = $"Rejected: {reason}";
+    }
+
     // Required for EF Core
     private Payment() 
     {

@@ -29,6 +29,7 @@ builder.AddEventBus((x) =>
     // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus extension
     
     x.AddConsumer<LoanApprovedConsumer>();
+    x.AddConsumer<FraudEvaluatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {
