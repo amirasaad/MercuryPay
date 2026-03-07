@@ -2,16 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <ProjectReference Include="..\..\BuildingBlocks\ServiceDefaults\MercuryPay.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MercuryPay.ServiceDefaults\MercuryPay.ServiceDefaults.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
   </ItemGroup>
 
 </Project>

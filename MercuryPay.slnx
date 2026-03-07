@@ -1,0 +1,26 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/ApiGateway/">
+    <Project Path="src/ApiGateway/MercuryPay.ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/src/AspireHost/">
+    <Project Path="src/AspireHost/MercuryPay.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/ServiceDefaults/MercuryPay.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/">
+    <Project Path="src/Services/LendingService/MercuryPay.LendingService.csproj" />
+    <Project Path="src/Services/PaymentService/MercuryPay.PaymentService.csproj" />
+    <Project Path="src/Services/RiskService/MercuryPay.RiskService.csproj" />
+    <Project Path="src/Services/WalletService/MercuryPay.WalletService.csproj" />
+  </Folder>
+  <Folder Name="/src/Web/">
+    <Project Path="src/Web/MercuryPay.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/PaymentService.Tests/MercuryPay.PaymentService.Tests.csproj" />
+    <Project Path="tests/UnitTests/WalletService.Tests/MercuryPay.WalletService.Tests.csproj" />
+  </Folder>
+</Solution>
