@@ -20,6 +20,7 @@ builder.Services.AddOpenTelemetry()
 builder.AddEventBus(x => 
 {
     x.AddConsumer<LoanApprovedFaultConsumer>();
+    x.AddConsumer<LoanCreatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

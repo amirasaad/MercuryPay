@@ -27,15 +27,15 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             throw new ArgumentException("Amount must be positive");
         }
 
-        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Approved", DateTime.UtcNow); // Auto-approve for now
+        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Processing", DateTime.UtcNow);
         
         _context.Loans.Add(loan);
         await _context.SaveChangesAsync();
         
-        _logger.LogInformation("Loan {LoanId} created for user {UserId}", loan.Id, userId);
+        _logger.LogInformation("Loan {LoanId} created for user {UserId}. Status: Processing", loan.Id, userId);
 
-        // Publish LoanApproved event
-        await _publishEndpoint.Publish(new LoanApproved(
+        // Publish LoanCreated event (Async Processing)
+        await _publishEndpoint.Publish(new LoanCreated(
             loan.Id,
             loan.UserId,
             loan.Amount,
