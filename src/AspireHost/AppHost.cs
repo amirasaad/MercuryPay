@@ -1,9 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+var messaging = builder.AddRabbitMQ("messaging");
+
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
+    .WithReference(messaging)
     .WithHttpHealthCheck("/health");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
+    .WithReference(messaging)
     .WithHttpHealthCheck("/health");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")

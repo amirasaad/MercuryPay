@@ -1,5 +1,6 @@
-using System.Collections.Concurrent;
 using MercuryPay.WalletService.Models;
+using MercuryPay.WalletService.Infrastructure;
+using DomainWallet = MercuryPay.WalletService.Domain.Wallet;
 
 namespace MercuryPay.WalletService.Services;
 
@@ -9,20 +10,29 @@ public interface IWalletService
     Wallet? GetWallet(Guid id);
 }
 
-public class WalletService : IWalletService
+public class WalletService(WalletDbContext context) : IWalletService
 {
-    private static readonly ConcurrentDictionary<Guid, Wallet> _wallets = new();
+    private readonly WalletDbContext _context = context;
 
     public Wallet CreateWallet(string userId, string currency)
     {
-        var wallet = new Wallet(Guid.NewGuid(), userId, currency, 0.00m);
-        _wallets[wallet.Id] = wallet;
-        return wallet;
+        var domainWallet = new DomainWallet(Guid.NewGuid(), userId, currency);
+        
+        _context.Wallets.Add(domainWallet);
+        _context.SaveChanges();
+
+        return new Wallet(domainWallet.Id, domainWallet.UserId, domainWallet.Currency, domainWallet.Balance);
     }
 
     public Wallet? GetWallet(Guid id)
     {
-        _wallets.TryGetValue(id, out var wallet);
-        return wallet;
+        var domainWallet = _context.Wallets.Find(id);
+        
+        if (domainWallet == null)
+        {
+            return null;
+        }
+
+        return new Wallet(domainWallet.Id, domainWallet.UserId, domainWallet.Currency, domainWallet.Balance);
     }
 }

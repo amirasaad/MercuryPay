@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Services\RiskService\MercuryPay.RiskService.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.1.2" />
+  </ItemGroup>
+
 </Project>

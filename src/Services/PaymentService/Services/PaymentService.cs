@@ -1,19 +1,22 @@
 using System.Collections.Concurrent;
 using MercuryPay.PaymentService.Models;
+using MassTransit;
+using MercuryPay.BuildingBlocks.Events;
 
 namespace MercuryPay.PaymentService.Services;
 
 public interface IPaymentService
 {
-    PaymentResponse CreatePayment(PaymentRequest request);
-    PaymentResponse? GetPayment(Guid id);
+    Task<PaymentResponse> CreatePayment(PaymentRequest request);
+    Task<PaymentResponse?> GetPayment(Guid id);
 }
 
-public class PaymentService : IPaymentService
+public class PaymentService(IPublishEndpoint publishEndpoint) : IPaymentService
 {
     private static readonly ConcurrentDictionary<Guid, PaymentResponse> _payments = new();
+    private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
 
-    public PaymentResponse CreatePayment(PaymentRequest request)
+    public async Task<PaymentResponse> CreatePayment(PaymentRequest request)
     {
         if (request.Amount <= 0)
         {
@@ -30,12 +33,22 @@ public class PaymentService : IPaymentService
         );
 
         _payments[response.Id] = response;
+
+        await _publishEndpoint.Publish(new PaymentCreated(
+            response.Id,
+            response.FromUserId,
+            response.ToUserId,
+            response.Amount,
+            response.Currency,
+            DateTimeOffset.UtcNow
+        ));
+
         return response;
     }
 
-    public PaymentResponse? GetPayment(Guid id)
+    public Task<PaymentResponse?> GetPayment(Guid id)
     {
         _payments.TryGetValue(id, out var payment);
-        return payment;
+        return Task.FromResult(payment);
     }
 }

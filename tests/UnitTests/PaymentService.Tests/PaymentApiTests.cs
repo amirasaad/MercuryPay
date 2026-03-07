@@ -2,12 +2,40 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
+using MassTransit;
+using Moq;
+using Microsoft.Extensions.DependencyInjection;
+using MercuryPay.PaymentService.Models;
+using Microsoft.Extensions.Hosting;
+using MercuryPay.BuildingBlocks.Events;
 
 namespace MercuryPay.PaymentService.Tests;
 
-public class PaymentApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class PaymentApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory = factory;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
+
+    public PaymentApiTests(WebApplicationFactory<Program> factory)
+    {
+        _mockPublishEndpoint = new Mock<IPublishEndpoint>();
+        
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                // Remove existing registration if any
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPublishEndpoint));
+                if (descriptor != null)
+                {
+                    services.Remove(descriptor);
+                }
+                
+                // Add mock
+                services.AddScoped(_ => _mockPublishEndpoint.Object);
+            });
+        });
+    }
 
     [Fact]
     public async Task CreatePayment_ReturnsCreated_WhenRequestIsValid()
@@ -32,6 +60,9 @@ public class PaymentApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.NotNull(responseBody);
         Assert.NotEqual(Guid.Empty, responseBody.Id);
         Assert.Equal("Pending", responseBody.Status);
+
+        // Verify event was published
+        _mockPublishEndpoint.Verify(x => x.Publish(It.IsAny<PaymentCreated>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -77,7 +108,7 @@ public class PaymentApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var payment = await getResponse.Content.ReadFromJsonAsync<PaymentResponse>();
         Assert.NotNull(payment);
         Assert.Equal(createdPayment.Id, payment.Id);
-        Assert.Equal(50.00m, createdPayment.Amount); // Check if amount is returned correctly (assuming we add Amount to response)
+        Assert.Equal(50.00m, createdPayment.Amount); 
     }
 
     [Fact]
@@ -92,11 +123,4 @@ public class PaymentApiTests(WebApplicationFactory<Program> factory) : IClassFix
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
-}
-
-public class PaymentResponse
-{
-    public Guid Id { get; set; }
-    public string? Status { get; set; }
-    public decimal Amount { get; set; }
 }

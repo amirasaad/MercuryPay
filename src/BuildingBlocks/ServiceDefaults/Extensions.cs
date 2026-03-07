@@ -4,9 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ServiceDiscovery;
+using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using MassTransit;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -40,6 +42,36 @@ public static class Extensions
         // {
         //     options.AllowedSchemes = ["https"];
         // });
+
+        return builder;
+    }
+
+    public static TBuilder AddEventBus<TBuilder>(this TBuilder builder, Action<IBusRegistrationConfigurator>? configure = null) where TBuilder : IHostApplicationBuilder
+    {
+        builder.Services.AddMassTransit(x =>
+        {
+            x.SetKebabCaseEndpointNameFormatter();
+            
+            configure?.Invoke(x);
+
+            var connectionString = builder.Configuration.GetConnectionString("messaging");
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                x.UsingInMemory((context, cfg) =>
+                {
+                    cfg.ConfigureEndpoints(context);
+                });
+            }
+            else
+            {
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    cfg.Host(connectionString);
+                    cfg.ConfigureEndpoints(context);
+                });
+            }
+        });
 
         return builder;
     }

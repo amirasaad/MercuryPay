@@ -1,12 +1,26 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using MassTransit;
+using Moq;
+using MercuryPay.WalletService.Models;
 
 namespace MercuryPay.WalletService.Tests;
 
 public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory = factory;
+    private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                // Mock IPublishEndpoint just in case
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPublishEndpoint));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddScoped(_ => new Mock<IPublishEndpoint>().Object);
+            });
+        });
 
     [Fact]
     public async Task CreateWallet_ReturnsCreated_WhenRequestIsValid()

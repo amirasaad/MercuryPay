@@ -1,12 +1,15 @@
+using MercuryPay.PaymentService.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+builder.AddEventBus();
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
-builder.Services.AddScoped<MercuryPay.PaymentService.Services.IPaymentService, MercuryPay.PaymentService.Services.PaymentService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

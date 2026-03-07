@@ -11,12 +11,12 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     private readonly IPaymentService _paymentService = paymentService;
 
     [HttpPost]
-    public IActionResult Create([FromBody] PaymentRequest request)
+    public async Task<IActionResult> Create([FromBody] PaymentRequest request)
     {
         try
         {
-            var response = _paymentService.CreatePayment(request);
-            return CreatedAtAction(nameof(Create), new { id = response.Id }, response);
+            var response = await _paymentService.CreatePayment(request);
+            return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (ArgumentException ex)
         {
@@ -25,9 +25,9 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public IActionResult Get(Guid id)
+    public async Task<IActionResult> Get(Guid id)
     {
-        var payment = _paymentService.GetPayment(id);
+        var payment = await _paymentService.GetPayment(id);
         if (payment == null)
         {
             return NotFound();

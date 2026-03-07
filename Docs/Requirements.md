@@ -8,6 +8,7 @@
 |------------|---------|--------|------------------------|
 | 2026-03-07 | 1.0.0   | AI     | Initial creation of requirements baseline. |
 | 2026-03-07 | 1.1.0   | AI     | Refined requirements for measurability, added constraints, dependencies, risks, and updated traceability. |
+| 2026-03-07 | 1.2.0   | AI     | Updated status of REQ-PAY-004 and REQ-WAL-003 to Implemented. Added REQ-WAL-005. |
 
 ## 2. Introduction
 
@@ -64,6 +65,8 @@ The Wallet Service maintains user balances and ensures financial integrity.
   - *Acceptance Criteria*: Database contains a log of all credits/debits linked to the wallet.
 - **REQ-WAL-004**: The system MUST support idempotent funds reservation (hold) and release (capture).
   - *Acceptance Criteria*: Repeated calls with the same transaction ID do not result in double deduction.
+- **REQ-WAL-005**: The system MUST process `PaymentCreated` events to update wallet balances.
+  - *Acceptance Criteria*: Sender wallet is debited, recipient wallet is credited (or created if not exists), and transaction is logged.
 
 ### 4.3 Lending Service
 The Lending Service manages loan lifecycles.
@@ -131,9 +134,10 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | --- | --- | --- | --- | --- |
 | **REQ-PAY-001** | Initiate Payment | `PaymentService.Controllers.PaymentsController` | `TEST-PAY-001` | Implemented |
 | **REQ-PAY-002** | Validate Amount | `PaymentService.Domain.Payment` | `TEST-PAY-002` | Implemented |
-| **REQ-PAY-004** | Publish PaymentCreated | `PaymentService.Infrastructure.EventBus` | `TEST-PAY-INT-001` | Pending |
+| **REQ-PAY-004** | Publish PaymentCreated | `PaymentService.Infrastructure.EventBus` | `TEST-PAY-INT-001` | Implemented |
 | **REQ-WAL-001** | Create Wallet | `WalletService.Controllers.WalletsController` | `TEST-WAL-001` | Implemented |
-| **REQ-WAL-003** | Immutable Ledger | `WalletService.Domain.LedgerEntry` | `TEST-WAL-003` | Pending |
+| **REQ-WAL-003** | Immutable Ledger | `WalletService.Domain.LedgerEntry` | `TEST-WAL-003` | Implemented |
+| **REQ-WAL-005** | Consume PaymentCreated | `WalletService.Consumers.PaymentCreatedConsumer` | `TEST-WAL-005` | Implemented |
 | **REQ-LEND-001** | Apply for Loan | `LendingService.Controllers.LoansController` | `TEST-LEND-001` | Pending |
 | **REQ-RISK-001** | Evaluate Fraud | `RiskService.Services.FraudDetector` | `TEST-RISK-001` | Pending |
 | **NFR-PERF-001** | < 200ms Response | Infrastructure / Aspire | `PERF-001` | Pending |
