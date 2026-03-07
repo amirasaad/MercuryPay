@@ -27,4 +27,18 @@ public class WalletsController(IWalletService walletService) : ControllerBase
         }
         return Ok(wallet);
     }
+
+    [HttpPost("{id}/credit")]
+    public IActionResult Credit(Guid id, [FromBody] decimal amount)
+    {
+        try
+        {
+            _walletService.CreditWallet(id, amount);
+            return Ok();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
 }

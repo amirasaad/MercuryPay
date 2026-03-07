@@ -10,13 +10,17 @@ var paymentDb = postgres.AddDatabase("paymentdb");
 var walletDb = postgres.AddDatabase("walletdb");
 
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithReference(messaging)
     .WithReference(paymentDb)
+    .WaitFor(paymentDb)
     .WithHttpHealthCheck("/health");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithReference(messaging)
     .WithReference(walletDb)
+    .WaitFor(walletDb)
     .WithHttpHealthCheck("/health");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")

@@ -8,6 +8,7 @@ public interface IWalletService
 {
     Wallet CreateWallet(string userId, string currency);
     Wallet? GetWallet(Guid id);
+    void CreditWallet(Guid id, decimal amount);
 }
 
 public class WalletService(WalletDbContext context) : IWalletService
@@ -34,5 +35,14 @@ public class WalletService(WalletDbContext context) : IWalletService
         }
 
         return new Wallet(domainWallet.Id, domainWallet.UserId, domainWallet.Currency, domainWallet.Balance);
+    }
+
+    public void CreditWallet(Guid id, decimal amount)
+    {
+        var domainWallet = _context.Wallets.Find(id);
+        if (domainWallet == null) throw new KeyNotFoundException("Wallet not found");
+
+        domainWallet.Credit(amount, Guid.NewGuid().ToString(), "Manual Credit");
+        _context.SaveChanges();
     }
 }

@@ -48,12 +48,37 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.Logger.LogInformation("PaymentService starting in environment: {Environment}", app.Environment.EnvironmentName);
+
 // Auto-migrate database (for development simplicity)
-if (app.Environment.IsDevelopment())
+// if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
-    db.Database.EnsureCreated();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    // Simple retry policy for DB creation to handle container startup timing
+    var retryCount = 10;
+    while (retryCount > 0)
+    {
+        try
+        {
+            db.Database.EnsureCreated();
+            logger.LogInformation("Database created successfully.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            retryCount--;
+            if (retryCount == 0)
+            {
+                logger.LogError(ex, "Failed to create database after retries.");
+                throw;
+            }
+            logger.LogWarning(ex, "Database not ready, retrying in 2s... ({RetriesLeft} retries left)", retryCount);
+            Thread.Sleep(2000);
+        }
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -67,6 +92,9 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 app.MapGet("/", () => "Payment Service is running.");
+app.MapGet("/env", () => app.Environment.EnvironmentName);
+app.MapGet("/routes", (IEnumerable<EndpointDataSource> endpointSources) =>
+    string.Join("\n", endpointSources.SelectMany(source => source.Endpoints)));
 
 app.MapDefaultEndpoints();
 
