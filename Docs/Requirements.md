@@ -137,6 +137,7 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | **REQ-PAY-004** | Publish PaymentCreated | `PaymentService.Infrastructure.EventBus` | `TEST-PAY-INT-001` | Implemented |
 | **REQ-WAL-001** | Create Wallet | `WalletService.Controllers.WalletsController` | `TEST-WAL-001` | Implemented |
 | **REQ-WAL-003** | Immutable Ledger | `WalletService.Domain.LedgerEntry` | `TEST-WAL-003` | Implemented |
+| **REQ-WAL-004** | Idempotency | `WalletService.Domain.Wallet` | `TEST-WAL-004` | Implemented |
 | **REQ-WAL-005** | Consume PaymentCreated | `WalletService.Consumers.PaymentCreatedConsumer` | `TEST-WAL-005` | Implemented |
 | **REQ-LEND-001** | Apply for Loan | `LendingService.Controllers.LoansController` | `TEST-LEND-001` | Pending |
 | **REQ-RISK-001** | Evaluate Fraud | `RiskService.Services.FraudDetector` | `TEST-RISK-001` | Pending |

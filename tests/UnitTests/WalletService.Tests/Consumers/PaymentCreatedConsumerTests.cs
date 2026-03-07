@@ -92,4 +92,40 @@ public class PaymentCreatedConsumerTests : IDisposable
         var updatedToWallet = await _context.Wallets.FindAsync(toWallet.Id);
         Assert.Equal(0m, updatedToWallet!.Balance); // Should not have changed
     }
+
+    [Fact]
+    public async Task Consume_IsIdempotent_WhenMessageIsProcessedTwice()
+    {
+        // Arrange
+        var fromWallet = new Wallet(Guid.NewGuid(), "user_1", "USD");
+        fromWallet.Credit(500m, "INIT", "Initial Balance");
+        var toWallet = new Wallet(Guid.NewGuid(), "user_2", "USD");
+        _context.Wallets.AddRange(fromWallet, toWallet);
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        var message = new PaymentCreated(Guid.NewGuid(), "user_1", "user_2", 100m, "USD", DateTimeOffset.UtcNow);
+        var contextMock = new Mock<ConsumeContext<PaymentCreated>>();
+        contextMock.Setup(x => x.Message).Returns(message);
+
+        // Act - First process
+        await _consumer.Consume(contextMock.Object);
+        
+        // Clear change tracker to simulate fresh context load for second process
+        _context.ChangeTracker.Clear();
+        
+        // Act - Second process (duplicate)
+        await _consumer.Consume(contextMock.Object);
+
+        // Assert
+        var updatedFromWallet = await _context.Wallets.Include(w => w.Ledger).FirstOrDefaultAsync(w => w.Id == fromWallet.Id);
+        var updatedToWallet = await _context.Wallets.Include(w => w.Ledger).FirstOrDefaultAsync(w => w.Id == toWallet.Id);
+
+        Assert.Equal(400m, updatedFromWallet!.Balance); // Should be deducted only once
+        Assert.Equal(100m, updatedToWallet!.Balance);   // Should be credited only once
+        
+        // Check ledger entries count
+        Assert.Equal(2, updatedFromWallet.Ledger.Count); // INIT + 1 Debit
+        Assert.Equal(1, updatedToWallet.Ledger.Count);   // 1 Credit
+    }
 }

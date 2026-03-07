@@ -24,6 +24,7 @@ public class Wallet
     public void Credit(decimal amount, string transactionId, string description)
     {
         if (amount <= 0) throw new ArgumentException("Amount must be positive");
+        if (_ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
 
         _ledger.Add(new LedgerEntry(
             Guid.NewGuid(),
@@ -40,6 +41,7 @@ public class Wallet
     public void Debit(decimal amount, string transactionId, string description)
     {
         if (amount <= 0) throw new ArgumentException("Amount must be positive");
+        if (_ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
         if (Balance < amount) throw new InvalidOperationException("Insufficient funds");
 
         _ledger.Add(new LedgerEntry(
