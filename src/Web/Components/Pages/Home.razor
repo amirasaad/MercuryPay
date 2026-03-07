@@ -1,7 +1,52 @@
-﻿@page "/"
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard - MercuryPay</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4">Welcome to MercuryPay</h1>
+            <p class="lead">Your secure and reliable financial platform.</p>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <AuthorizeView>
+        <Authorized>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-wallet2"></i> My Wallets</h5>
+                            <p class="card-text">Manage your funds and view balances.</p>
+                            <a href="wallets" class="btn btn-primary">Go to Wallets</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-credit-card"></i> Payments</h5>
+                            <p class="card-text">Send money and view transaction history.</p>
+                            <a href="payments" class="btn btn-primary">Make a Payment</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-cash-stack"></i> Loans</h5>
+                            <p class="card-text">Apply for loans and manage repayments.</p>
+                            <a href="loans" class="btn btn-primary">View Loans</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="alert alert-info" role="alert">
+                Please <a href="authentication/login">log in</a> to access your dashboard.
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>

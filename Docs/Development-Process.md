@@ -40,6 +40,9 @@ This document outlines the **Documentation-Driven Development (DDD)** process fo
 ### 4. Verification Phase
 
 - **Run All Tests**: Ensure no regressions.
+  - Unit Tests: `dotnet test`
+  - Integration Tests: `dotnet test tests/IntegrationTests`
+  - E2E Tests: `dotnet test tests/E2E/MercuryPay.E2E.Tests`
 - **Update RTM**: Mark requirements as "Implemented" in the design document.
 - **Review Documentation**: Ensure the implementation didn't deviate from the design. If it did, update the design document to reflect the reality (decisions made during coding).
 

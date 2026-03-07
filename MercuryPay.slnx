@@ -32,4 +32,7 @@
   <Folder Name="/tests/UnitTests/Web.Tests/">
     <Project Path="tests/UnitTests/Web.Tests/MercuryPay.Web.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/E2E/">
+    <Project Path="tests/E2E/MercuryPay.E2E.Tests/MercuryPay.E2E.Tests.csproj" />
+  </Folder>
 </Solution>
