@@ -1,9 +1,12 @@
 using MercuryPay.WalletService.Models;
 using MercuryPay.WalletService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace MercuryPay.WalletService.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class WalletsController(IWalletService walletService) : ControllerBase
@@ -13,7 +16,9 @@ public class WalletsController(IWalletService walletService) : ControllerBase
     [HttpPost]
     public IActionResult Create([FromBody] CreateWalletRequest request)
     {
-        var wallet = _walletService.CreateWallet(request.UserId, request.Currency);
+        // Override UserId with authenticated user
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var wallet = _walletService.CreateWallet(userId ?? request.UserId, request.Currency);
         return CreatedAtAction(nameof(Get), new { id = wallet.Id }, wallet);
     }
 

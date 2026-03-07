@@ -1,9 +1,12 @@
 using MercuryPay.PaymentService.Models;
 using MercuryPay.PaymentService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace MercuryPay.PaymentService.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class PaymentsController(IPaymentService paymentService) : ControllerBase
@@ -15,7 +18,11 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     {
         try
         {
-            var response = await _paymentService.CreatePayment(request);
+            // Override FromUserId with authenticated user
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var paymentReq = request with { FromUserId = userId ?? request.FromUserId };
+
+            var response = await _paymentService.CreatePayment(paymentReq);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (ArgumentException ex)

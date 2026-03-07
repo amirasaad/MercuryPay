@@ -9,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+
+// Add Authentication
+builder.AddDefaultAuthentication();
+
 // Add Database Context
 var connectionString = builder.Configuration.GetConnectionString("walletdb");
 if (string.IsNullOrEmpty(connectionString))
@@ -56,38 +60,10 @@ var app = builder.Build();
 
 app.Logger.LogInformation("WalletService starting in environment: {Environment}", app.Environment.EnvironmentName);
 
-// Auto-migrate database (for development simplicity)
-// if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<WalletDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    
-    // Simple retry policy for DB creation to handle container startup timing
-    var retryCount = 10;
-    while (retryCount > 0)
-    {
-        try
-        {
-            db.Database.EnsureCreated();
-            logger.LogInformation("Database created successfully.");
-            break;
-        }
-        catch (Exception ex)
-        {
-            retryCount--;
-            if (retryCount == 0)
-            {
-                logger.LogError(ex, "Failed to create database after retries.");
-                throw;
-            }
-            logger.LogWarning(ex, "Database not ready, retrying in 2s... ({RetriesLeft} retries left)", retryCount);
-            Thread.Sleep(2000);
-        }
-    }
-}
+app.UseHttpsRedirection();
 
-// Configure the HTTP request pipeline.
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

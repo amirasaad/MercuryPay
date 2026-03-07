@@ -20,12 +20,16 @@ var keycloakEndpoint = keycloak.GetEndpoint("http");
 var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
     .WithReference(paymentDb)
     .WithReference(rabbitmq)
-    .WithReference(keycloak);
+    .WithReference(keycloak)
+    .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
+    .WithEnvironment("Identity__Audience", "account");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
     .WithReference(walletDb)
     .WithReference(rabbitmq)
-    .WithReference(keycloak);
+    .WithReference(keycloak)
+    .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
+    .WithEnvironment("Identity__Audience", "account");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
     .WithReference(lendingDb)
