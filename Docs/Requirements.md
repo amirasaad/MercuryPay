@@ -164,10 +164,11 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | **REQ-RISK-002** | Risk Score | P2 | `RiskService.Domain.RiskAssessment` | `TEST-RISK-E2E-002` | Implemented |
 | **REQ-RISK-003** | Audit History | P3 | `RiskService.Infrastructure.RiskRepository` | `TEST-RISK-003` | Pending |
 | **REQ-WEB-000** | User Login | P0 | `Web.Components.Pages.Login` | `TEST-E2E-LOGIN-001` | Passed |
-| **REQ-WEB-001** | Dashboard Access | P1 | `Web.Components.Pages.Home` | `TEST-E2E-HOME-001` | Passed |
-| **REQ-WEB-002** | Wallets Page | P1 | `Web.Components.Pages.Wallets` | `TEST-WEB-UI-002` | Pending |
-| **REQ-WEB-003** | Payments Page | P1 | `Web.Components.Pages.Payments` | `TEST-WEB-UI-003` | Pending |
-| **REQ-WEB-004** | Loans Page | P2 | `Web.Components.Pages.Loans` | `TEST-WEB-UI-004` | Implemented |
+| **REQ-WEB-001** | View Wallets | P1 | `Web.Components.Pages.Wallets` | `TEST-E2E-WEB-001` | Implemented |
+| **REQ-WEB-002** | Create Wallet | P1 | `Web.Components.Pages.Wallets` | `TEST-E2E-WEB-002` | Implemented |
+| **REQ-WEB-003** | Dashboard Access | P1 | `Web.Components.Pages.Home` | `TEST-E2E-HOME-001` | Passed |
+| **REQ-WEB-004** | Payments Page | P1 | `Web.Components.Pages.Payments` | `TEST-WEB-UI-003` | Pending |
+| **REQ-WEB-005** | Loans Page | P2 | `Web.Components.Pages.Loans` | `TEST-WEB-UI-004` | Implemented |
 | **NFR-PERF-001** | < 200ms Response | P2 | Infrastructure / Aspire | `PERF-001` | Pending |
 | **NFR-SEC-001** | OAuth2/OIDC | P0 | `Web.Program.cs` / Keycloak | `SEC-001` | Passed |
 | **NFR-REL-002** | Outbox Pattern | P1 | Shared Kernel / Middleware | `REL-002` | Implemented |
