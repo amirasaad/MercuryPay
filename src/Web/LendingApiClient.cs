@@ -35,7 +35,16 @@ public class LendingApiClient(HttpClient httpClient)
         var response = await _httpClient.PostAsync($"/loans/{loanId}/retry", null, cancellationToken);
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<bool> RepayLoanAsync(Guid loanId, decimal amount, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"/loans/{loanId}/repay", new RepayLoanRequest(amount), cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
 }
 
-public record LoanRequestModel(string UserId, decimal Amount, string Currency);
-public record LoanResponseModel(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt);
+public record LoanRequestModel(string UserId, decimal Amount, string Currency, int TermMonths = 12);
+public record RepayLoanRequest(decimal Amount);
+public record LoanResponseModel(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleModel? RepaymentSchedule);
+public record InstallmentModel(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, string Status);
+public record RepaymentScheduleModel(List<InstallmentModel> Installments, decimal TotalInterest, decimal AnnualInterestRate);

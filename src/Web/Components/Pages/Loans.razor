@@ -38,6 +38,11 @@
         <InputText id="currency" class="form-control" @bind-Value="loanModel!.Currency" />
     </div>
 
+    <div class="mb-3">
+        <label for="term" class="form-label">Term (Months)</label>
+        <InputNumber id="term" class="form-control" @bind-Value="loanModel!.TermMonths" />
+    </div>
+
     <button type="submit" class="btn btn-primary">Apply</button>
 </EditForm>
 
@@ -131,7 +136,7 @@ else
             return;
         }
 
-        var request = new LoanRequestModel(userId ?? "unknown", loanModel.Amount, loanModel.Currency);
+        var request = new LoanRequestModel(userId ?? "unknown", loanModel.Amount, loanModel.Currency, loanModel.TermMonths);
         var result = await LendingApi.CreateLoanAsync(request);
 
         if (result != null)
@@ -180,5 +185,6 @@ else
     {
         public decimal Amount { get; set; } = 1000;
         public string Currency { get; set; } = "USD";
+        public int TermMonths { get; set; } = 12;
     }
 }

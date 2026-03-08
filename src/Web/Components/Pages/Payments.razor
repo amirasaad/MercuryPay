@@ -1,7 +1,157 @@
 @page "/payments"
+@using MercuryPay.Web
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @attribute [Authorize]
+@inject LendingApiClient LendingApi
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Payments - MercuryPay</PageTitle>
 
 <h1>Payments</h1>
-<p>Payment functionality coming soon...</p>
+
+@if (isLoading)
+{
+    <p><em>Loading upcoming payments...</em></p>
+}
+else if (!upcomingInstallments.Any())
+{
+    <p>No upcoming payments found.</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Upcoming Installments</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Due Date</th>
+                        <th>Loan ID</th>
+                        <th>Amount</th>
+                        <th>Interest</th>
+                        <th>Total Due</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var installment in upcomingInstallments)
+                    {
+                        <tr>
+                            <td>@installment.DueDate.ToLocalTime().ToString("d")</td>
+                            <td><small>@installment.LoanId</small></td>
+                            <td>@installment.PrincipalAmount.ToString("C")</td>
+                            <td>@installment.InterestAmount.ToString("C")</td>
+                            <td><strong>@installment.TotalAmount.ToString("C")</strong></td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(installment.Status)">
+                                    @installment.Status
+                                </span>
+                            </td>
+                            <td>
+                                @if (installment.Status == "Pending")
+                                {
+                                    <button class="btn btn-sm btn-success" @onclick="() => PayInstallment(installment.LoanId, installment)">
+                                        Pay Now
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (message != null)
+{
+    <div class="alert alert-info mt-3">@message</div>
+}
+
+@code {
+    private bool isLoading = true;
+    private List<InstallmentViewModel> upcomingInstallments = new();
+    private string? message;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        isLoading = true;
+        try
+        {
+            var loans = await LendingApi.GetMyLoansAsync();
+            upcomingInstallments = loans
+                .Where(l => l.RepaymentSchedule != null)
+                .SelectMany(l => l.RepaymentSchedule!.Installments.Select(i => new InstallmentViewModel
+                {
+                    LoanId = l.Id,
+                    DueDate = i.DueDate,
+                    PrincipalAmount = i.PrincipalAmount,
+                    InterestAmount = i.InterestAmount,
+                    TotalAmount = i.TotalAmount,
+                    Status = i.Status
+                }))
+                .OrderBy(i => i.DueDate)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading payments: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PayInstallment(Guid loanId, InstallmentViewModel installment)
+    {
+        message = $"Processing payment of {installment.TotalAmount:C} for Loan {loanId}...";
+        
+        try
+        {
+            var success = await LendingApi.RepayLoanAsync(loanId, installment.TotalAmount);
+            if (success)
+            {
+                message = "Payment initiated successfully! The status will update shortly.";
+                await LoadPayments();
+            }
+            else
+            {
+                message = "Payment failed to initiate. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error processing payment: {ex.Message}";
+        }
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Paid" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Overdue" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    public class InstallmentViewModel
+    {
+        public Guid LoanId { get; set; }
+        public DateTime DueDate { get; set; }
+        public decimal PrincipalAmount { get; set; }
+        public decimal InterestAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+}
