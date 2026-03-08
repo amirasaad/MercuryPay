@@ -83,34 +83,49 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
     {
         if (RepaymentSchedule == null) return;
 
-        // Find the oldest pending installment
-        var installment = RepaymentSchedule.Installments
-            .OrderBy(i => i.DueDate)
-            .FirstOrDefault(i => i.Status == "Pending");
+        var remainingPayment = amount;
 
-        if (installment != null)
+        // Find pending installments ordered by date
+        var pendingInstallments = RepaymentSchedule.Installments
+            .Where(i => i.Status == "Pending" || i.Status == "PartiallyPaid")
+            .OrderBy(i => i.DueDate)
+            .ToList();
+
+        foreach (var installment in pendingInstallments)
         {
-            // For MVP, we assume the payment covers the installment if it's close enough
-            // In a real app, we'd handle partial payments or verify exact amount
-            if (amount >= installment.TotalAmount * 0.99m) // Allow small tolerance
+            if (remainingPayment <= 0) break;
+
+            var index = RepaymentSchedule.Installments.IndexOf(installment);
+            var amountDue = installment.TotalAmount - installment.PaidAmount;
+            
+            if (remainingPayment >= amountDue)
             {
-                var index = RepaymentSchedule.Installments.IndexOf(installment);
-                RepaymentSchedule.Installments[index] = installment with { Status = "Paid" };
+                // Full payment for this installment
+                RepaymentSchedule.Installments[index] = installment with { 
+                    PaidAmount = installment.TotalAmount, 
+                    Status = "Paid" 
+                };
+                remainingPayment -= amountDue;
+            }
+            else
+            {
+                // Partial payment
+                RepaymentSchedule.Installments[index] = installment with { 
+                    PaidAmount = installment.PaidAmount + remainingPayment, 
+                    Status = "PartiallyPaid" 
+                };
+                remainingPayment = 0;
             }
         }
-
-        // Check if all installments are paid
+        
+        // Update loan status if all paid
         if (RepaymentSchedule.Installments.All(i => i.Status == "Paid"))
         {
             Status = "Repaid";
         }
         else
         {
-            // If not all paid, revert status to Approved (or Active) if it was RepaymentProcessing
-            if (Status == "RepaymentProcessing")
-            {
-                Status = "Approved";
-            }
+            Status = "Active"; 
         }
     }
 }

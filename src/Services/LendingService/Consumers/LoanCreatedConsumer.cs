@@ -16,9 +16,6 @@ public class LoanCreatedConsumer(LendingDbContext context, ILogger<LoanCreatedCo
         var message = context.Message;
         _logger.LogInformation("Processing loan approval for Loan {LoanId}", message.LoanId);
 
-        // Simulate credit check delay
-        await Task.Delay(2000);
-
         var loan = await _context.Loans.FindAsync(message.LoanId);
         if (loan == null)
         {

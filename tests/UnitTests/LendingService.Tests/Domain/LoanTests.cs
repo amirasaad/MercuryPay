@@ -49,4 +49,39 @@ public class LoanTests
         Assert.Equal(createdAt.AddMonths(1), firstInstallment.DueDate);
         Assert.Equal(createdAt.AddMonths(12), schedule.Installments.Last().DueDate);
     }
+
+    [Fact]
+    public void ProcessRepayment_ShouldHandlePartialPayments()
+    {
+        // Arrange
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        loan.GenerateRepaymentSchedule();
+        var firstInstallment = loan.RepaymentSchedule!.Installments.First();
+        var paymentAmount = firstInstallment.TotalAmount / 2;
+
+        // Act
+        loan.ProcessRepayment(paymentAmount);
+
+        // Assert
+        var updatedInstallment = loan.RepaymentSchedule.Installments.First();
+        Assert.Equal("PartiallyPaid", updatedInstallment.Status);
+        Assert.Equal(paymentAmount, updatedInstallment.PaidAmount);
+        Assert.Equal("Active", loan.Status);
+    }
+
+    [Fact]
+    public void ProcessRepayment_ShouldHandleFullRepayment()
+    {
+        // Arrange
+        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", "Approved", DateTime.UtcNow, 1, 0.05m);
+        loan.GenerateRepaymentSchedule();
+        var totalAmount = loan.RepaymentSchedule!.Installments.Sum(i => i.TotalAmount);
+
+        // Act
+        loan.ProcessRepayment(totalAmount);
+
+        // Assert
+        Assert.All(loan.RepaymentSchedule.Installments, i => Assert.Equal("Paid", i.Status));
+        Assert.Equal("Repaid", loan.Status);
+    }
 }

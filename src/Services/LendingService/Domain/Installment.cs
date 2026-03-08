@@ -5,5 +5,6 @@ public record Installment(
     decimal PrincipalAmount,
     decimal InterestAmount,
     decimal TotalAmount,
+    decimal PaidAmount = 0,
     string Status = "Pending"
 );
