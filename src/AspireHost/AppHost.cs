@@ -35,7 +35,8 @@ var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("len
     .WithReference(rabbitmq)
     .WithReference(keycloak)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
-    .WithEnvironment("Identity__Audience", "account");
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "true");
 
 var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
     .WithReference(riskDb)
