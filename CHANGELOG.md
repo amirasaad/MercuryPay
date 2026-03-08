@@ -3,6 +3,50 @@
 <a name="1.2.0"></a>
 <a name="1.3.0"></a>
 <a name="1.3.1"></a>
+<a name="1.4.0"></a>
+# [1.4.0](https://github.com/user/MercuryPay/compare/v1.3.1...v1.4.0) (2026-03-08)
+
+
+### ♻️ Code Refactoring
+
+* use LoggerMessage for high-performance logging ([b795dec](https://github.com/user/MercuryPay/commit/b795dec)), closes [hi#performance](https://github.com/hi/issues/performance)
+
+
+### ✅ Tests
+
+* **integration:** update loan constructor usage ([0c88c6d](https://github.com/user/MercuryPay/commit/0c88c6d))
+
+
+### ✨ Features
+
+* **auth:** allow disabling auth validation for dev/perf ([d3aea91](https://github.com/user/MercuryPay/commit/d3aea91))
+* implement risk service persistence and audit history (REQ-RISK-003) ([2a98950](https://github.com/user/MercuryPay/commit/2a98950))
+* **lending:** implement loan repayment logic ([dfc00a2](https://github.com/user/MercuryPay/commit/dfc00a2))
+* **web:** implement payments page and integration ([9af1901](https://github.com/user/MercuryPay/commit/9af1901))
+
+
+### 🐛 Bug Fixes
+
+* **payment:** configure MassTransit bus correctly ([890a14f](https://github.com/user/MercuryPay/commit/890a14f))
+* **risk:** downgrade MassTransit to 8.3.4 ([60b37ac](https://github.com/user/MercuryPay/commit/60b37ac))
+* **wallet:** include amount in LoanRepaymentProcessed event ([58ae823](https://github.com/user/MercuryPay/commit/58ae823))
+
+
+### 📝 Documentation
+
+* add loan repayment schedule design ([fe4d960](https://github.com/user/MercuryPay/commit/fe4d960))
+* mark risk evaluation history requirement as implemented ([624cfde](https://github.com/user/MercuryPay/commit/624cfde))
+
+
+### 🔨 Chores
+
+* **git:** ignore NBomber reports ([9a32d60](https://github.com/user/MercuryPay/commit/9a32d60))
+
+
+### 🚀 Performance Improvements
+
+* **tests:** add NBomber benchmarks and docs ([699f8bf](https://github.com/user/MercuryPay/commit/699f8bf))
+
 ## [1.3.1](https://github.com/user/MercuryPay/compare/v1.3.0...v1.3.1) (2026-03-08)
 
 
