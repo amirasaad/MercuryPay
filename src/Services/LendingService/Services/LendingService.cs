@@ -8,11 +8,11 @@ namespace MercuryPay.LendingService.Services;
 
 public interface ILendingService
 {
-    Task<Loan> CreateLoan(string userId, decimal amount, string currency);
+    Task<Loan> CreateLoan(string userId, decimal amount, string currency, int termMonths);
     Task<Loan?> GetLoan(Guid id);
     Task<List<Loan>> GetLoansByUser(string userId);
     Task<bool> RetryDisbursement(Guid loanId);
-    Task<bool> RepayLoan(Guid loanId);
+    Task<bool> RepayLoan(Guid loanId, decimal amount);
 }
 
 public class LendingService(LendingDbContext context, ILogger<LendingService> logger, IPublishEndpoint publishEndpoint) : ILendingService
@@ -20,8 +20,9 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
     private readonly LendingDbContext _context = context;
     private readonly ILogger<LendingService> _logger = logger;
     private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
+    private const decimal DefaultAnnualInterestRate = 0.05m; // 5% Fixed for MVP
 
-    public async Task<Loan> CreateLoan(string userId, decimal amount, string currency)
+    public async Task<Loan> CreateLoan(string userId, decimal amount, string currency, int termMonths)
     {
         if (amount <= 0)
         {
@@ -29,12 +30,24 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             throw new ArgumentException("Amount must be positive");
         }
 
-        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Processing", DateTime.UtcNow);
+        if (termMonths <= 0 || termMonths > 120)
+        {
+            _logger.LogWarning("Invalid loan term: {Term}", termMonths);
+            throw new ArgumentException("Term must be between 1 and 120 months");
+        }
+
+        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Processing", DateTime.UtcNow, termMonths, DefaultAnnualInterestRate);
+        
+        // Generate schedule immediately
+        loan.GenerateRepaymentSchedule();
         
         _context.Loans.Add(loan);
         await _context.SaveChangesAsync();
         
-        _logger.LogInformation("Loan {LoanId} created for user {UserId}. Status: Processing", loan.Id, userId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Loan {LoanId} created for user {UserId}. Status: Processing, Term: {Term} months", loan.Id, userId, termMonths);
+        }
 
         // Publish LoanCreated event (Async Processing)
         await _publishEndpoint.Publish(new LoanCreated(
@@ -90,39 +103,34 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         return true;
     }
 
-    public async Task<bool> RepayLoan(Guid loanId)
+    public async Task<bool> RepayLoan(Guid loanId, decimal amount)
     {
-        // Atomically update status from Approved to RepaymentProcessing to prevent race conditions
-        var rowsAffected = await _context.Loans
-            .Where(l => l.Id == loanId && l.Status == "Approved")
-            .ExecuteUpdateAsync(setters => setters.SetProperty(l => l.Status, "RepaymentProcessing"));
-
-        if (rowsAffected == 0)
+        // Fetch loan first (compatible with InMemory provider)
+        var loan = await _context.Loans.FirstOrDefaultAsync(l => l.Id == loanId);
+        
+        if (loan == null)
         {
-            var loanCheck = await _context.Loans.AsNoTracking().FirstOrDefaultAsync(l => l.Id == loanId);
-            if (loanCheck == null)
-            {
-                _logger.LogWarning("Loan {LoanId} not found for repayment", loanId);
-            }
-            else
-            {
-                _logger.LogWarning("Loan {LoanId} status is {Status}, cannot repay", loanId, loanCheck.Status);
-            }
+            _logger.LogWarning("Loan {LoanId} not found for repayment", loanId);
             return false;
         }
 
-        // Fetch fresh entity to get details for event
-        var loan = await _context.Loans.AsNoTracking().FirstOrDefaultAsync(l => l.Id == loanId);
-        
-        if (loan == null) return false; // Should not happen
+        if (loan.Status != "Approved")
+        {
+            _logger.LogWarning("Loan {LoanId} status is {Status}, cannot repay", loanId, loan.Status);
+            return false;
+        }
 
-        _logger.LogInformation("Initiating repayment for Loan {LoanId}", loanId);
+        // Update status
+        loan.MarkAsRepaymentProcessing();
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Initiating repayment for Loan {LoanId} Amount {Amount}", loanId, amount);
 
         // Publish LoanRepaymentRequested event
         await _publishEndpoint.Publish(new LoanRepaymentRequested(
             loan.Id,
             loan.UserId,
-            loan.Amount,
+            amount, // Use the requested amount
             loan.Currency,
             DateTimeOffset.UtcNow
         ));

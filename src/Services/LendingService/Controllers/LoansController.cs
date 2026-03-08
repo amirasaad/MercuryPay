@@ -1,3 +1,4 @@
+using MercuryPay.LendingService.Domain;
 using MercuryPay.LendingService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,16 +26,9 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             ? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? request.UserId 
             : request.UserId;
 
-        var loan = await _lendingService.CreateLoan(userId, request.Amount, request.Currency);
+        var loan = await _lendingService.CreateLoan(userId, request.Amount, request.Currency, request.TermMonths);
         
-        return CreatedAtAction(nameof(Get), new { id = loan.Id }, new LoanResponse(
-            loan.Id,
-            loan.UserId,
-            loan.Amount,
-            loan.Currency,
-            loan.Status,
-            loan.CreatedAt
-        ));
+        return CreatedAtAction(nameof(Get), new { id = loan.Id }, MapToResponse(loan));
     }
 
     [HttpGet("{id}")]
@@ -47,14 +41,7 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             return NotFound();
         }
 
-        return Ok(new LoanResponse(
-            loan.Id,
-            loan.UserId,
-            loan.Amount,
-            loan.Currency,
-            loan.Status,
-            loan.CreatedAt
-        ));
+        return Ok(MapToResponse(loan));
     }
 
     [HttpGet]
@@ -68,14 +55,7 @@ public class LoansController(ILendingService lendingService) : ControllerBase
 
         var loans = await _lendingService.GetLoansByUser(userId);
         
-        return Ok(loans.Select(loan => new LoanResponse(
-            loan.Id,
-            loan.UserId,
-            loan.Amount,
-            loan.Currency,
-            loan.Status,
-            loan.CreatedAt
-        )));
+        return Ok(loans.Select(MapToResponse));
     }
 
     [HttpGet("user/{userId}")]
@@ -83,14 +63,32 @@ public class LoansController(ILendingService lendingService) : ControllerBase
     {
         var loans = await _lendingService.GetLoansByUser(userId);
         
-        return Ok(loans.Select(loan => new LoanResponse(
+        return Ok(loans.Select(MapToResponse));
+    }
+
+    private static LoanResponse MapToResponse(Loan loan)
+    {
+        return new LoanResponse(
             loan.Id,
             loan.UserId,
             loan.Amount,
             loan.Currency,
             loan.Status,
-            loan.CreatedAt
-        )));
+            loan.CreatedAt,
+            loan.TermMonths,
+            loan.AnnualInterestRate,
+            loan.RepaymentSchedule != null ? new RepaymentScheduleDto(
+                [.. loan.RepaymentSchedule.Installments.Select(i => new InstallmentDto(
+                    i.DueDate,
+                    i.PrincipalAmount,
+                    i.InterestAmount,
+                    i.TotalAmount,
+                    i.Status
+                ))],
+                loan.RepaymentSchedule.TotalInterest,
+                loan.RepaymentSchedule.AnnualInterestRate
+            ) : null
+        );
     }
 
     [HttpPost("{id}/retry")]
@@ -107,15 +105,20 @@ public class LoansController(ILendingService lendingService) : ControllerBase
     }
 
     [HttpPost("{id}/repay")]
-    public async Task<IActionResult> Repay(Guid id)
+    public async Task<IActionResult> Repay(Guid id, [FromBody] RepayLoanRequest request)
     {
-        var result = await _lendingService.RepayLoan(id);
+        if (request.Amount <= 0)
+        {
+            return BadRequest("Amount must be positive");
+        }
+
+        var result = await _lendingService.RepayLoan(id, request.Amount);
         
         if (!result)
         {
-            return BadRequest("Cannot repay loan");
+            return BadRequest("Loan cannot be repaid (invalid status or not found)");
         }
-        
+
         return Accepted();
     }
 
@@ -132,5 +135,8 @@ public class LoansController(ILendingService lendingService) : ControllerBase
     }
 }
 
-public record CreateLoanRequest(string UserId, decimal Amount, string Currency);
-public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt);
+public record CreateLoanRequest(string UserId, decimal Amount, string Currency, int TermMonths = 12);
+public record RepayLoanRequest(decimal Amount);
+public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleDto? RepaymentSchedule = null);
+public record InstallmentDto(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, string Status);
+public record RepaymentScheduleDto(List<InstallmentDto> Installments, decimal TotalInterest, decimal AnnualInterestRate);

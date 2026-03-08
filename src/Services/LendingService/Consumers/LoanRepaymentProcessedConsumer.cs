@@ -13,7 +13,8 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
     public async Task Consume(ConsumeContext<LoanRepaymentProcessed> context)
     {
         var message = context.Message;
-        _logger.LogInformation("Processing repayment result for Loan {LoanId}, Success: {Success}", message.LoanId, message.Success);
+        _logger.LogInformation("Processing repayment result for Loan {LoanId}, Amount: {Amount}, Success: {Success}", 
+            message.LoanId, message.Amount, message.Success);
 
         var loan = await _context.Loans.FindAsync(message.LoanId);
         if (loan == null)
@@ -24,8 +25,8 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
 
         if (message.Success)
         {
-            loan.MarkAsRepaid();
-            _logger.LogInformation("Loan {LoanId} marked as Repaid", message.LoanId);
+            loan.ProcessRepayment(message.Amount);
+            _logger.LogInformation("Loan {LoanId} processed repayment of {Amount}", message.LoanId, message.Amount);
         }
         else
         {

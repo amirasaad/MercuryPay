@@ -32,13 +32,6 @@ builder.AddEventBus(x =>
             cfg.ConfigureEndpoints(context);
         });
     }
-    else
-    {
-        x.UsingInMemory((context, cfg) =>
-        {
-            cfg.ConfigureEndpoints(context);
-        });
-    }
 });
 
 // Add services to the container.
@@ -69,3 +62,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
