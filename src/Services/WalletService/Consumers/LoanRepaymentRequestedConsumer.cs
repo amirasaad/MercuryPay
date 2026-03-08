@@ -21,7 +21,7 @@ public class LoanRepaymentRequestedConsumer(IWalletService walletService, IPubli
         if (wallet == null)
         {
             _logger.LogWarning("No {Currency} wallet found for user {UserId}", message.Currency, message.UserId);
-            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, false, "Wallet not found", DateTimeOffset.UtcNow));
+            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, message.Amount, false, "Wallet not found", DateTimeOffset.UtcNow));
             return;
         }
 
@@ -30,12 +30,12 @@ public class LoanRepaymentRequestedConsumer(IWalletService walletService, IPubli
             _walletService.DebitWallet(wallet.Id, message.Amount);
             _logger.LogInformation("Debited {Amount} {Currency} from Wallet {WalletId}", message.Amount, message.Currency, wallet.Id);
             
-            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, true, string.Empty, DateTimeOffset.UtcNow));
+            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, message.Amount, true, string.Empty, DateTimeOffset.UtcNow));
         }
         catch (InvalidOperationException ex) // Insufficient funds
         {
             _logger.LogWarning("Insufficient funds for repayment of Loan {LoanId}: {Message}", message.LoanId, ex.Message);
-            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, false, "Insufficient funds", DateTimeOffset.UtcNow));
+            await _publishEndpoint.Publish(new LoanRepaymentProcessed(message.LoanId, message.UserId, message.Amount, false, "Insufficient funds", DateTimeOffset.UtcNow));
         }
         catch (Exception ex)
         {
