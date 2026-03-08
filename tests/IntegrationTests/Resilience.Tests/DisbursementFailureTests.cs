@@ -48,7 +48,7 @@ public class DisbursementFailureTests
             // Seed a Loan
             var dbContext = provider.GetRequiredService<LendingDbContext>();
             var loanId = Guid.NewGuid();
-            var loan = new Loan(loanId, "user_123", 1000, "USD", "Approved", DateTime.UtcNow);
+            var loan = new Loan(loanId, "user_123", 1000, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
             dbContext.Loans.Add(loan);
             await dbContext.SaveChangesAsync();
 
