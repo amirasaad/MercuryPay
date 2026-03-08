@@ -1,10 +1,13 @@
 using MassTransit;
 using MercuryPay.RiskService.Consumers;
+using MercuryPay.RiskService.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-// builder.AddRabbitMQClient("messaging");
+
+builder.AddNpgsqlDbContext<RiskDbContext>("riskdb");
 
 builder.Services.AddMassTransit(x =>
 {
@@ -17,6 +20,13 @@ builder.Services.AddMassTransit(x =>
         cfg.Host(builder.Configuration.GetConnectionString("messaging"));
         cfg.ConfigureEndpoints(context);
     });
+
+    x.AddEntityFrameworkOutbox<RiskDbContext>(o =>
+    {
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
 });
 
 // Add services to the container.
@@ -26,6 +36,14 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+
+// Apply migrations automatically
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<RiskDbContext>();
+    // Wait for DB to be ready (Aspire usually handles this, but good to be safe)
+    context.Database.EnsureCreated(); 
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -7,6 +7,7 @@ var postgres = builder.AddPostgres("postgres")
 var paymentDb = postgres.AddDatabase("paymentdb");
 var walletDb = postgres.AddDatabase("walletdb");
 var lendingDb = postgres.AddDatabase("lendingdb");
+var riskDb = postgres.AddDatabase("riskdb");
 
 var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
@@ -37,6 +38,7 @@ var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("len
     .WithEnvironment("Identity__Audience", "account");
 
 var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
+    .WithReference(riskDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account");

@@ -15,6 +15,7 @@
     <Project Path="src/Services/RiskService/MercuryPay.RiskService.csproj" />
     <Project Path="src/Services/WalletService/MercuryPay.WalletService.csproj" />
   </Folder>
+  <Folder Name="/src/Services/RiskService/" />
   <Folder Name="/src/Web/">
     <Project Path="src/Web/MercuryPay.Web.csproj" />
   </Folder>
@@ -28,6 +29,9 @@
   </Folder>
   <Folder Name="/tests/UnitTests/LendingService.Tests/">
     <Project Path="tests/UnitTests/LendingService.Tests/MercuryPay.LendingService.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/UnitTests/RiskService.Tests/">
+    <Project Path="tests/UnitTests/RiskService.Tests/MercuryPay.RiskService.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/UnitTests/Web.Tests/">
     <Project Path="tests/UnitTests/Web.Tests/MercuryPay.Web.Tests.csproj" />
