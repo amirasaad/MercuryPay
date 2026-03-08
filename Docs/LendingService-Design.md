@@ -34,7 +34,15 @@ The Lending Service is responsible for managing loan applications, approvals, an
 - **LoanApproved**: Published when a loan is approved. This event triggers the disbursement process in the Payment Service.
 - **LoanRepaid**: Published when a loan is fully repaid.
 
-## 4. API Specification
+## 4. Technical Implementation Details
+
+### Concurrency Handling
+
+To prevent race conditions during critical state transitions (e.g., loan repayment), the service employs **Atomic Database Updates**.
+
+- **RepayLoan**: Uses EF Core's `ExecuteUpdateAsync` to atomically update the loan status from `Approved` to `RepaymentProcessing`. This ensures that concurrent repayment requests for the same loan cannot both succeed; only the first request will modify the row, and subsequent requests will affect 0 rows and be rejected.
+
+## 5. API Specification
 
 ### Apply for Loan
 

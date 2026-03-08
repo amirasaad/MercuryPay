@@ -100,10 +100,23 @@ public class LoansController(ILendingService lendingService) : ControllerBase
         
         if (!result)
         {
-            return BadRequest("Cannot retry disbursement. Loan not found or status is not DisbursementFailed.");
+            return BadRequest("Cannot retry disbursement");
         }
+        
+        return Accepted();
+    }
 
-        return Ok("Disbursement retry initiated.");
+    [HttpPost("{id}/repay")]
+    public async Task<IActionResult> Repay(Guid id)
+    {
+        var result = await _lendingService.RepayLoan(id);
+        
+        if (!result)
+        {
+            return BadRequest("Cannot repay loan");
+        }
+        
+        return Accepted();
     }
 
     [HttpGet("me")]

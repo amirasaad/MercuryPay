@@ -70,6 +70,17 @@ The Wallet Service is responsible for managing user wallets, balances, and doubl
 
 - **Response**: `404 Not Found`
 
+### Event Consumers
+
+- **PaymentCreated**: 
+  - **Source**: Payment Service.
+  - **Action**: Handles all funds transfers (P2P payments, Loan Disbursements).
+  - **Logic**: Debits sender wallet, credits receiver wallet. Auto-provisions wallets if they don't exist.
+- **LoanRepaymentRequested**:
+  - **Source**: Lending Service.
+  - **Action**: Processes loan repayments.
+  - **Logic**: Debits user wallet, publishes `LoanRepaymentProcessed`.
+
 ## 5. Requirements Traceability Matrix (RTM)
 
 For the full project requirements and traceability matrix, please refer to [Requirements.md](./Requirements.md).

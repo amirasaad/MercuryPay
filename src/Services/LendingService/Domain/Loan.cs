@@ -23,4 +23,19 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
     {
         Status = "Approved";
     }
+
+    public void MarkAsRepaymentProcessing()
+    {
+        Status = "RepaymentProcessing";
+    }
+
+    public void MarkAsRepaid()
+    {
+        Status = "Repaid";
+    }
+
+    public void MarkAsRepaymentFailed()
+    {
+        Status = "RepaymentFailed";
+    }
 }

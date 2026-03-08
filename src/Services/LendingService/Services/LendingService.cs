@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MercuryPay.LendingService.Domain;
 using MercuryPay.LendingService.Infrastructure;
 using MercuryPay.BuildingBlocks.Events;
@@ -11,6 +12,7 @@ public interface ILendingService
     Task<Loan?> GetLoan(Guid id);
     Task<List<Loan>> GetLoansByUser(string userId);
     Task<bool> RetryDisbursement(Guid loanId);
+    Task<bool> RepayLoan(Guid loanId);
 }
 
 public class LendingService(LendingDbContext context, ILogger<LendingService> logger, IPublishEndpoint publishEndpoint) : ILendingService
@@ -53,8 +55,7 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
 
     public async Task<List<Loan>> GetLoansByUser(string userId)
     {
-        return await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
-            System.Linq.Queryable.Where(_context.Loans, l => l.UserId == userId));
+        return await _context.Loans.Where(l => l.UserId == userId).ToListAsync();
     }
 
     public async Task<bool> RetryDisbursement(Guid loanId)
@@ -79,6 +80,46 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
 
         // Publish LoanApproved event again
         await _publishEndpoint.Publish(new LoanApproved(
+            loan.Id,
+            loan.UserId,
+            loan.Amount,
+            loan.Currency,
+            DateTimeOffset.UtcNow
+        ));
+
+        return true;
+    }
+
+    public async Task<bool> RepayLoan(Guid loanId)
+    {
+        // Atomically update status from Approved to RepaymentProcessing to prevent race conditions
+        var rowsAffected = await _context.Loans
+            .Where(l => l.Id == loanId && l.Status == "Approved")
+            .ExecuteUpdateAsync(setters => setters.SetProperty(l => l.Status, "RepaymentProcessing"));
+
+        if (rowsAffected == 0)
+        {
+            var loanCheck = await _context.Loans.AsNoTracking().FirstOrDefaultAsync(l => l.Id == loanId);
+            if (loanCheck == null)
+            {
+                _logger.LogWarning("Loan {LoanId} not found for repayment", loanId);
+            }
+            else
+            {
+                _logger.LogWarning("Loan {LoanId} status is {Status}, cannot repay", loanId, loanCheck.Status);
+            }
+            return false;
+        }
+
+        // Fetch fresh entity to get details for event
+        var loan = await _context.Loans.AsNoTracking().FirstOrDefaultAsync(l => l.Id == loanId);
+        
+        if (loan == null) return false; // Should not happen
+
+        _logger.LogInformation("Initiating repayment for Loan {LoanId}", loanId);
+
+        // Publish LoanRepaymentRequested event
+        await _publishEndpoint.Publish(new LoanRepaymentRequested(
             loan.Id,
             loan.UserId,
             loan.Amount,

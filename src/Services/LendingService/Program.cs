@@ -21,12 +21,24 @@ builder.AddEventBus(x =>
 {
     x.AddConsumer<LoanApprovedFaultConsumer>();
     x.AddConsumer<LoanCreatedConsumer>();
+    x.AddConsumer<LoanRepaymentProcessedConsumer>();
 
-    x.UsingRabbitMq((context, cfg) =>
+    var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
+    if (!string.IsNullOrEmpty(messagingConnectionString))
     {
-        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
-        cfg.ConfigureEndpoints(context);
-    });
+        x.UsingRabbitMq((context, cfg) =>
+        {
+            cfg.Host(messagingConnectionString);
+            cfg.ConfigureEndpoints(context);
+        });
+    }
+    else
+    {
+        x.UsingInMemory((context, cfg) =>
+        {
+            cfg.ConfigureEndpoints(context);
+        });
+    }
 });
 
 // Add services to the container.

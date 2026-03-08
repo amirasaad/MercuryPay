@@ -28,6 +28,8 @@ builder.AddEventBus(x =>
 {
     // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus
     x.AddConsumer<PaymentCreatedConsumer>();
+    // LoanApprovedConsumer removed in favor of PaymentService flow
+    x.AddConsumer<LoanRepaymentRequestedConsumer>();
     
     if (!string.IsNullOrEmpty(connectionString))
     {
@@ -39,11 +41,22 @@ builder.AddEventBus(x =>
         });
     }
 
-    x.UsingRabbitMq((context, cfg) =>
+    var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
+    if (!string.IsNullOrEmpty(messagingConnectionString))
     {
-        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
-        cfg.ConfigureEndpoints(context);
-    });
+        x.UsingRabbitMq((context, cfg) =>
+        {
+            cfg.Host(messagingConnectionString);
+            cfg.ConfigureEndpoints(context);
+        });
+    }
+    else
+    {
+        x.UsingInMemory((context, cfg) =>
+        {
+            cfg.ConfigureEndpoints(context);
+        });
+    }
 });
 
 builder.Services.AddProblemDetails();
