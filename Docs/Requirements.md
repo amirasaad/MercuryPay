@@ -94,6 +94,7 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 - **REQ-RISK-002**: The system MUST provide a risk score (0-100, where 100 is high risk) and a decision (Approve/Reject/Review).
   - *Acceptance Criteria*: Score calculation logic is applied; decision is published via event.
 - **REQ-RISK-003**: The system MUST store the history of risk evaluations for audit purposes.
+  - *Status*: Implemented (v1.3.0)
   - *Acceptance Criteria*: Admin can retrieve past risk checks for a payment.
 
 ## 5. Non-Functional Requirements
