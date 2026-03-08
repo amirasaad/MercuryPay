@@ -41,8 +41,8 @@ app.MapDefaultEndpoints();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<RiskDbContext>();
-    // Wait for DB to be ready (Aspire usually handles this, but good to be safe)
-    context.Database.EnsureCreated(); 
+    // Apply migrations
+    context.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.
