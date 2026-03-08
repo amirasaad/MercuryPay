@@ -2,6 +2,14 @@
 <a name="1.1.0"></a>
 <a name="1.2.0"></a>
 <a name="1.3.0"></a>
+<a name="1.3.1"></a>
+## [1.3.1](https://github.com/user/MercuryPay/compare/v1.3.0...v1.3.1) (2026-03-08)
+
+
+### ♻️ Code Refactoring
+
+* improve loan disbursement and fix concurrency ([fc66479](https://github.com/user/MercuryPay/commit/fc66479)), closes [hi#load](https://github.com/hi/issues/load)
+
 # [1.3.0](https://github.com/user/MercuryPay/compare/v1.2.0...v1.3.0) (2026-03-07)
 
 
