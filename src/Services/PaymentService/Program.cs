@@ -31,18 +31,22 @@ builder.AddEventBus((x) =>
     x.AddConsumer<LoanApprovedConsumer>();
     x.AddConsumer<FraudEvaluatedConsumer>();
 
-    x.UsingRabbitMq((context, cfg) =>
+    var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
+    if (!string.IsNullOrEmpty(messagingConnectionString))
     {
-        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
-        
-        cfg.ReceiveEndpoint("loan-approved", e =>
+        x.UsingRabbitMq((context, cfg) =>
         {
-            e.ConfigureConsumer<LoanApprovedConsumer>(context);
-            e.UseMessageRetry(r => r.Exponential(5, TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(500)));
-        });
+            cfg.Host(messagingConnectionString);
+            
+            cfg.ReceiveEndpoint("loan-approved", e =>
+            {
+                e.ConfigureConsumer<LoanApprovedConsumer>(context);
+                e.UseMessageRetry(r => r.Exponential(5, TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(500)));
+            });
 
-        cfg.ConfigureEndpoints(context);
-    });
+            cfg.ConfigureEndpoints(context);
+        });
+    }
 
     if (!string.IsNullOrEmpty(connectionString))
     {
