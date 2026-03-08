@@ -10,7 +10,7 @@ handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousA
 var httpClient = new HttpClient(handler);
 
 // Default to Lending Service URL from launchSettings.json (https profile)
-var baseUrl = args.Length > 0 ? args[0] : "https://localhost:7250"; 
+var baseUrl = args.Length > 0 ? args[0] : "https://localhost:7249"; 
 
 Console.WriteLine($"Targeting Lending Service at: {baseUrl}");
 

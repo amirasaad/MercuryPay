@@ -42,7 +42,7 @@ This document outlines the performance benchmarking strategy and results for the
 Run the benchmarks using the `MercuryPay.PerformanceTests` console application.
 
 ```bash
-dotnet run --project tests/PerformanceTests/MercuryPay.PerformanceTests.csproj
+dotnet run --project tests/PerformanceTests/MercuryPay.PerformanceTests/MercuryPay.PerformanceTests.csproj -- https://localhost:7249
 ```
 
 ## 6. Baseline Results (Local Development)
@@ -53,7 +53,7 @@ dotnet run --project tests/PerformanceTests/MercuryPay.PerformanceTests.csproj
 
 | Scenario | RPS | Latency (p50) | Latency (p95) | Latency (p99) | Status |
 | --- | --- | --- | --- | --- | --- |
-| Create Loan | 10 | 3.68 ms | 9.38 ms | 201.73 ms | **PASS** (p95 < 200ms) |
-| Get Loans | 20 | 0.94 ms | 3.87 ms | 171.65 ms | **PASS** (p95 < 200ms) |
+| Create Loan | 10 | 4.53 ms | 11.42 ms | 38.62 ms | **PASS** (p95 < 200ms) |
+| Get Loans | 20 | 1.79 ms | 4.71 ms | 13.46 ms | **PASS** (p95 < 200ms) |
 
 *Note: Throughput testing (NFR-PERF-002) requires a dedicated load test environment and Release build optimization to reach 1000 TPS target.*
