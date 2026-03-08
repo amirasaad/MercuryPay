@@ -24,9 +24,22 @@ The Lending Service is responsible for managing loan applications, approvals, an
   - **CreatedAt**: Application date.
   - **DueDate**: Repayment deadline.
 
+### Entities
+
+- **RepaymentSchedule**: Value object or entity representing the schedule.
+  - **Installments**: List of payments.
+  - **TotalInterest**: Total cost of borrowing.
+  - **AnnualInterestRate**: The APR used for calculation.
+
 ### Value Objects
 
 - **Money**: Amount and Currency.
+- **Installment**: Single repayment entry.
+  - **DueDate**: When this payment is due.
+  - **PrincipalAmount**: Portion of payment covering the loan balance.
+  - **InterestAmount**: Portion of payment covering interest.
+  - **TotalAmount**: Principal + Interest.
+  - **Status**: Pending/Paid/Overdue.
 
 ### Events
 
@@ -35,6 +48,26 @@ The Lending Service is responsible for managing loan applications, approvals, an
 - **LoanRepaid**: Published when a loan is fully repaid.
 
 ## 4. Technical Implementation Details
+
+### Repayment Schedule Algorithm
+
+The system uses an **Amortization Schedule** (Equal Monthly Installments) for loan repayment calculation.
+
+Formula for Monthly Payment (PMT):
+`PMT = (P * r * (1 + r)^n) / ((1 + r)^n - 1)`
+
+Where:
+
+- `P`: Principal loan amount
+- `r`: Monthly interest rate (Annual Rate / 12)
+- `n`: Total number of months (Term)
+
+**Example**:
+
+- Loan: $1,000
+- Term: 12 Months
+- Rate: 5% Annual
+- Monthly Payment: ~$85.61
 
 ### Concurrency Handling
 
