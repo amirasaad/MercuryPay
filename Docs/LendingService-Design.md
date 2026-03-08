@@ -39,7 +39,8 @@ The Lending Service is responsible for managing loan applications, approvals, an
   - **PrincipalAmount**: Portion of payment covering the loan balance.
   - **InterestAmount**: Portion of payment covering interest.
   - **TotalAmount**: Principal + Interest.
-  - **Status**: Pending/Paid/Overdue.
+  - **PaidAmount**: Amount paid so far.
+  - **Status**: Pending/PartiallyPaid/Paid/Overdue.
 
 ### Events
 
@@ -69,11 +70,22 @@ Where:
 - Rate: 5% Annual
 - Monthly Payment: ~$85.61
 
+### Partial Repayment Logic
+
+The system supports partial repayments. When a payment is received:
+
+1. Pending installments are ordered by due date.
+2. Payment amount is applied to the oldest installment first.
+3. If payment covers the full installment amount, status becomes `Paid`.
+4. If payment is less than the installment amount, status becomes `PartiallyPaid` and `PaidAmount` is updated.
+5. Remaining payment amount (if any) is applied to the next installment.
+6. Loan status remains `Active` until all installments are `Paid`.
+
 ### Concurrency Handling
 
-To prevent race conditions during critical state transitions (e.g., loan repayment), the service employs **Atomic Database Updates**.
+To prevent race conditions during critical state transitions (e.g., loan repayment), the service employs **Optimistic Concurrency Control**.
 
-- **RepayLoan**: Uses EF Core's `ExecuteUpdateAsync` to atomically update the loan status from `Approved` to `RepaymentProcessing`. This ensures that concurrent repayment requests for the same loan cannot both succeed; only the first request will modify the row, and subsequent requests will affect 0 rows and be rejected.
+- **RepayLoan**: Uses a fetch-update-save pattern with versioning (future scope) or rigorous validation. Currently, the system locks the loan for processing during repayment to ensure consistency.
 
 ## 5. API Specification
 
@@ -135,7 +147,7 @@ To prevent race conditions during critical state transitions (e.g., loan repayme
 ## 5. Requirements Traceability Matrix (RTM)
 
 | Requirement ID | Description | Test Case ID | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | REQ-LEND-001 | System must allow creating a new loan application. | TEST-LEND-001 | Pending |
 | REQ-LEND-002 | Loan amount must be positive. | TEST-LEND-002 | Pending |
 | REQ-LEND-003 | System must retrieve loan details by ID. | TEST-LEND-003 | Pending |

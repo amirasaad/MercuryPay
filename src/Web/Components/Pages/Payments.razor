@@ -32,6 +32,7 @@ else
                         <th>Amount</th>
                         <th>Interest</th>
                         <th>Total Due</th>
+                        <th>Paid</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -45,16 +46,17 @@ else
                             <td>@installment.PrincipalAmount.ToString("C")</td>
                             <td>@installment.InterestAmount.ToString("C")</td>
                             <td><strong>@installment.TotalAmount.ToString("C")</strong></td>
+                            <td>@installment.PaidAmount.ToString("C")</td>
                             <td>
                                 <span class="badge @GetStatusBadgeClass(installment.Status)">
                                     @installment.Status
                                 </span>
                             </td>
                             <td>
-                                @if (installment.Status == "Pending")
+                                @if (installment.Status == "Pending" || installment.Status == "PartiallyPaid")
                                 {
                                     <button class="btn btn-sm btn-success" @onclick="() => PayInstallment(installment.LoanId, installment)">
-                                        Pay Now
+                                        Pay @((installment.TotalAmount - installment.PaidAmount).ToString("C"))
                                     </button>
                                 }
                             </td>
@@ -99,6 +101,7 @@ else
                     PrincipalAmount = i.PrincipalAmount,
                     InterestAmount = i.InterestAmount,
                     TotalAmount = i.TotalAmount,
+                    PaidAmount = i.PaidAmount,
                     Status = i.Status
                 }))
                 .OrderBy(i => i.DueDate)
@@ -116,11 +119,12 @@ else
 
     private async Task PayInstallment(Guid loanId, InstallmentViewModel installment)
     {
-        message = $"Processing payment of {installment.TotalAmount:C} for Loan {loanId}...";
+        var amountToPay = installment.TotalAmount - installment.PaidAmount;
+        message = $"Processing payment of {amountToPay:C} for Loan {loanId}...";
         
         try
         {
-            var success = await LendingApi.RepayLoanAsync(loanId, installment.TotalAmount);
+            var success = await LendingApi.RepayLoanAsync(loanId, amountToPay);
             if (success)
             {
                 message = "Payment initiated successfully! The status will update shortly.";
@@ -140,6 +144,7 @@ else
     private string GetStatusBadgeClass(string status) => status switch
     {
         "Paid" => "bg-success",
+        "PartiallyPaid" => "bg-info text-dark",
         "Pending" => "bg-warning text-dark",
         "Overdue" => "bg-danger",
         _ => "bg-secondary"
@@ -152,6 +157,7 @@ else
         public decimal PrincipalAmount { get; set; }
         public decimal InterestAmount { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }

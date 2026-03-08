@@ -46,5 +46,5 @@ public class LendingApiClient(HttpClient httpClient)
 public record LoanRequestModel(string UserId, decimal Amount, string Currency, int TermMonths = 12);
 public record RepayLoanRequest(decimal Amount);
 public record LoanResponseModel(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleModel? RepaymentSchedule);
-public record InstallmentModel(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, string Status);
+public record InstallmentModel(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, decimal PaidAmount, string Status);
 public record RepaymentScheduleModel(List<InstallmentModel> Installments, decimal TotalInterest, decimal AnnualInterestRate);

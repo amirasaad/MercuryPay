@@ -83,6 +83,7 @@ public class LoansController(ILendingService lendingService) : ControllerBase
                     i.PrincipalAmount,
                     i.InterestAmount,
                     i.TotalAmount,
+                    i.PaidAmount,
                     i.Status
                 ))],
                 loan.RepaymentSchedule.TotalInterest,
@@ -138,5 +139,5 @@ public class LoansController(ILendingService lendingService) : ControllerBase
 public record CreateLoanRequest(string UserId, decimal Amount, string Currency, int TermMonths = 12);
 public record RepayLoanRequest(decimal Amount);
 public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleDto? RepaymentSchedule = null);
-public record InstallmentDto(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, string Status);
+public record InstallmentDto(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, decimal PaidAmount, string Status);
 public record RepaymentScheduleDto(List<InstallmentDto> Installments, decimal TotalInterest, decimal AnnualInterestRate);
