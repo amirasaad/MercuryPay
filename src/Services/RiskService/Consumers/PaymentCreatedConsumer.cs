@@ -6,30 +6,34 @@ using Microsoft.Extensions.Logging;
 
 namespace MercuryPay.RiskService.Consumers;
 
-public class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logger, RiskDbContext dbContext) : IConsumer<PaymentCreated>
+public partial class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logger, RiskDbContext dbContext) : IConsumer<PaymentCreated>
 {
-    private void LogInformation(string message, params object[] args)
-    {
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("{Message}", string.Format(message, args));
-    }
+    [LoggerMessage(Level = LogLevel.Information, Message = "Evaluating risk for Payment {PaymentId}: Amount {Amount} {Currency}")]
+    private static partial void LogEvaluatingRisk(ILogger logger, Guid paymentId, decimal amount, string currency);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Risk Assessment for Payment {PaymentId}: Approved={Approved}, Score={Score}, Reason={Reason}")]
+    private static partial void LogRiskAssessment(ILogger logger, Guid paymentId, bool approved, int score, string reason);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Publishing FraudEvaluated Event for Payment {PaymentId}")]
+    private static partial void LogPublishingFraudEvaluated(ILogger logger, Guid paymentId);
+
     public async Task Consume(ConsumeContext<PaymentCreated> context)
     {
         var message = context.Message;
         
-       LogInformation("Evaluating risk for Payment {PaymentId}: Amount {Amount} {Currency}", message.PaymentId, message.Amount, message.Currency);
+        LogEvaluatingRisk(logger, message.PaymentId, message.Amount, message.Currency);
 
         // 1. Evaluate Risk
         var assessment = RiskAssessment.Evaluate(message.PaymentId, message.Amount, message.FromUserId);
 
-        LogInformation("Risk Assessment for Payment {PaymentId}: Approved={Approved}, Score={Score}, Reason={Reason}", assessment.Id, assessment.IsApproved, assessment.RiskScore, assessment.Reason);
+        LogRiskAssessment(logger, message.PaymentId, assessment.IsApproved, assessment.RiskScore, assessment.Reason);
 
         // 2. Save assessment to database
         dbContext.RiskAssessments.Add(assessment);
         await dbContext.SaveChangesAsync();
 
         // 3. Publish FraudEvaluated Event
-        LogInformation("Publishing FraudEvaluated Event for Payment {PaymentId}", message.PaymentId);
+        LogPublishingFraudEvaluated(logger, message.PaymentId);
         await context.Publish(new FraudEvaluated(
             message.PaymentId,
             assessment.IsApproved,
