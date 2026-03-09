@@ -39,7 +39,8 @@ public partial class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logg
             assessment.IsApproved,
             assessment.RiskScore,
             assessment.Reason,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            message.ReferenceId
         ));
         
         // Ensure EF Outbox dispatches the published message within the same unit of work
