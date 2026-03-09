@@ -15,8 +15,8 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
     public async Task Consume(ConsumeContext<PaymentCreated> context)
     {
         var message = context.Message;
-        _logger.LogInformation("Processing PaymentCreated: {PaymentId} from {FromUserId} to {ToUserId} Amount {Amount} {Currency}", 
-            message.PaymentId, message.FromUserId, message.ToUserId, message.Amount, message.Currency);
+        _logger.LogInformation("Processing PaymentCreated: {PaymentId} (Ref: {ReferenceId}) from {FromUserId} to {ToUserId} Amount {Amount} {Currency}", 
+            message.PaymentId, message.ReferenceId, message.FromUserId, message.ToUserId, message.Amount, message.Currency);
         
         // Find wallets
         var fromWallet = await _context.Wallets

@@ -52,7 +52,8 @@ public class PaymentCreatedConsumerTests : IDisposable
         _context.ChangeTracker.Clear();
 
         var paymentId = Guid.NewGuid();
-        var message = new PaymentCreated(paymentId, fromUserId, toUserId, amount, currency, DateTimeOffset.UtcNow);
+        var referenceId = Guid.NewGuid();
+        var message = new PaymentCreated(paymentId, fromUserId, toUserId, amount, currency, DateTimeOffset.UtcNow, referenceId);
         
         var contextMock = new Mock<ConsumeContext<PaymentCreated>>();
         contextMock.Setup(x => x.Message).Returns(message);
