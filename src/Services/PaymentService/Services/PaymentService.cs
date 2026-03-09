@@ -31,7 +31,7 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
         }
 
         var paymentId = Guid.NewGuid();
-        var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending");
+        var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending", request.ReferenceId);
 
         await _context.Payments.AddAsync(payment);
         
@@ -42,7 +42,8 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             request.ToUserId,
             request.Amount,
             request.Currency,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            request.ReferenceId
         ));
 
         // Save changes (commits both Payment entity and Outbox message atomically)
@@ -56,7 +57,8 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             payment.Amount,
             payment.Currency,
             payment.FromUserId,
-            payment.ToUserId
+            payment.ToUserId,
+            payment.ReferenceId
         );
     }
 
@@ -76,7 +78,8 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             payment.Amount,
             payment.Currency,
             payment.FromUserId,
-            payment.ToUserId
+            payment.ToUserId,
+            payment.ReferenceId
         );
     }
 }

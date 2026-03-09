@@ -24,7 +24,8 @@ public class LoanApprovedConsumer(IPaymentService paymentService, ILogger<LoanAp
                 message.Amount, 
                 message.Currency,
                 "LendingService", 
-                message.UserId
+                message.UserId,
+                message.LoanId
             );
 
             var payment = await _paymentService.CreatePayment(paymentRequest);

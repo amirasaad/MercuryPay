@@ -9,10 +9,11 @@ public class Payment
     public string ToUserId { get; private set; }
     public decimal Amount { get; private set; }
     public string Currency { get; private set; }
+    public Guid? ReferenceId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public string Status { get; private set; }
 
-    public Payment(Guid id, string fromUserId, string toUserId, decimal amount, string currency, string status)
+    public Payment(Guid id, string fromUserId, string toUserId, decimal amount, string currency, string status, Guid? referenceId = null)
     {
         Id = id;
         FromUserId = fromUserId;
@@ -20,6 +21,7 @@ public class Payment
         Amount = amount;
         Currency = currency;
         Status = status;
+        ReferenceId = referenceId;
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
