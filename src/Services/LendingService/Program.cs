@@ -40,8 +40,26 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 // Add EF Core
-builder.Services.AddDbContext<LendingDbContext>(options =>
-    options.UseInMemoryDatabase("LendingDb"));
+var connectionString = builder.Configuration.GetConnectionString("lendingdb");
+if (string.IsNullOrEmpty(connectionString))
+{
+    builder.Services.AddDbContext<LendingDbContext>(options =>
+        options.UseInMemoryDatabase("LendingDb"));
+}
+else
+{
+    if (!connectionString.Contains("Ssl Mode") && !connectionString.Contains("SslMode"))
+    {
+        builder.Configuration["ConnectionStrings:lendingdb"] = $"{connectionString};Ssl Mode=Disable";
+        connectionString = builder.Configuration.GetConnectionString("lendingdb");
+    }
+
+    builder.Services.AddDbContext<LendingDbContext>(options =>
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(15, TimeSpan.FromSeconds(3), null);
+        }));
+}
 
 // Add Services
 builder.Services.AddScoped<ILendingService, LendingService>();
@@ -60,6 +78,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Ensure Database is Created
+await app.SafeMigrateAsync<LendingDbContext>();
 
 app.Run();
 

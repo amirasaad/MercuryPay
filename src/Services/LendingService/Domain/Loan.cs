@@ -38,11 +38,11 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
             totalInterest += interestPayment;
 
             installments.Add(new Installment(
-                DueDate: CreatedAt.AddMonths(i),
-                PrincipalAmount: principalPayment,
-                InterestAmount: interestPayment,
-                TotalAmount: monthlyPayment,
-                Status: "Pending"
+                dueDate: CreatedAt.AddMonths(i),
+                principalAmount: principalPayment,
+                interestAmount: interestPayment,
+                totalAmount: monthlyPayment,
+                status: "Pending"
             ));
         }
 
@@ -101,19 +101,15 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
             if (remainingPayment >= amountDue)
             {
                 // Full payment for this installment
-                RepaymentSchedule.Installments[index] = installment with { 
-                    PaidAmount = installment.TotalAmount, 
-                    Status = "Paid" 
-                };
+                installment.PaidAmount = installment.TotalAmount;
+                installment.Status = "Paid";
                 remainingPayment -= amountDue;
             }
             else
             {
                 // Partial payment
-                RepaymentSchedule.Installments[index] = installment with { 
-                    PaidAmount = installment.PaidAmount + remainingPayment, 
-                    Status = "PartiallyPaid" 
-                };
+                installment.PaidAmount += remainingPayment;
+                installment.Status = "PartiallyPaid";
                 remainingPayment = 0;
             }
         }

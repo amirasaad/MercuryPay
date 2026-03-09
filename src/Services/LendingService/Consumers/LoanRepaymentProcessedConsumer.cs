@@ -16,7 +16,16 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
         _logger.LogInformation("Processing repayment result for Loan {LoanId}, Amount: {Amount}, Success: {Success}", 
             message.LoanId, message.Amount, message.Success);
 
-        var loan = await _context.Loans.FindAsync(message.LoanId);
+        // Explicitly include RepaymentSchedule to ensure it's loaded
+        // Note: For owned types, Include might not be enough if nested owned collection is not auto-loaded
+        // But for OwnsOne -> OwnsMany, usually it is loaded.
+        // Let's rely on default loading behavior first, or try explicit query if needed.
+        // But since RepaymentSchedule is a record, we can't easily navigate via ThenInclude if it's not exposed as navigation property in a way EF recognizes easily with lambdas if types mismatch?
+        // Actually, RepaymentSchedule is the property name.
+        var loan = await _context.Loans
+            .Include(l => l.RepaymentSchedule)
+            .FirstOrDefaultAsync(l => l.Id == message.LoanId);
+
         if (loan == null)
         {
             _logger.LogWarning("Loan {LoanId} not found during repayment processing", message.LoanId);
@@ -25,8 +34,16 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
 
         if (message.Success)
         {
+            _logger.LogInformation("Loan {LoanId} found. RepaymentSchedule present: {HasSchedule}. Installments count: {Count}", 
+                message.LoanId, 
+                loan.RepaymentSchedule != null, 
+                loan.RepaymentSchedule?.Installments?.Count ?? 0);
+
             loan.ProcessRepayment(message.Amount);
             _logger.LogInformation("Loan {LoanId} processed repayment of {Amount}", message.LoanId, message.Amount);
+            
+            // Force update to ensure EF Core detects changes in owned collection
+            _context.Update(loan);
         }
         else
         {

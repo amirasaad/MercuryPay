@@ -30,6 +30,7 @@ public class LendingDbContext(DbContextOptions<LendingDbContext> options) : DbCo
                     installment.Property(i => i.PrincipalAmount).HasPrecision(18, 2);
                     installment.Property(i => i.InterestAmount).HasPrecision(18, 2);
                     installment.Property(i => i.TotalAmount).HasPrecision(18, 2);
+                    installment.Property(i => i.PaidAmount).HasPrecision(18, 2);
                 });
             });
         });

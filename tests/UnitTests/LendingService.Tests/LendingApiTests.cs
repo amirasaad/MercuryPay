@@ -3,15 +3,19 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using MassTransit;
+using MassTransit.Testing;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 using MercuryPay.LendingService.Domain;
 using MercuryPay.LendingService.Infrastructure;
+using MercuryPay.LendingService.Consumers;
+using MercuryPay.BuildingBlocks.Events;
 
 namespace MercuryPay.LendingService.Tests;
 
@@ -34,13 +38,116 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         {
             builder.ConfigureTestServices(services =>
             {
+                // Remove existing DbContext options
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<LendingDbContext>));
+                if (descriptor != null)
+                {
+                    services.Remove(descriptor);
+                }
+
+                // Add InMemory DbContext with isolated provider
+                var efServiceProvider = new ServiceCollection()
+                    .AddEntityFrameworkInMemoryDatabase()
+                    .BuildServiceProvider();
+
+                services.AddDbContext<LendingDbContext>(options =>
+                {
+                    options.UseInMemoryDatabase("InMemoryDbForTesting");
+                    options.UseInternalServiceProvider(efServiceProvider);
+                    options.ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
+                });
+
                 services.AddAuthentication("Test")
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
                 
-                // Ensure MassTransit uses InMemory for tests
-                services.AddMassTransitTestHarness();
+                // Ensure MassTransit uses InMemory for tests and registers consumers
+                services.AddMassTransitTestHarness(x =>
+                {
+                    x.AddConsumer<LoanCreatedConsumer>();
+                    x.AddConsumer<LoanRepaymentProcessedConsumer>();
+                    x.AddConsumer<LoanApprovedFaultConsumer>();
+                });
             });
         });
+
+    [Fact]
+    public async Task RepayLoan_PartiallyUpdatesInstallmentStatus()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var harness = _factory.Services.GetRequiredService<ITestHarness>();
+        
+        var createRequest = new { UserId = "user_123", Amount = 1000.00m, Currency = "USD" };
+        var createResponse = await client.PostAsJsonAsync("/loans", createRequest);
+        createResponse.EnsureSuccessStatusCode();
+        var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
+        var loanId = loan!.Id;
+
+        // Wait for Loan to be Approved (consumed by LoanCreatedConsumer)
+        Assert.True(await harness.Consumed.Any<LoanCreated>(), "LoanCreated event was not consumed");
+
+        // Verify status is Approved via API with retry
+        LoanResponse? approvedLoan = null;
+        for (int i = 0; i < 20; i++)
+        {
+            var response = await client.GetAsync($"/loans/{loanId}");
+            var l = await response.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "Approved")
+            {
+                approvedLoan = l;
+                break;
+            }
+            await Task.Delay(100);
+        }
+        Assert.NotNull(approvedLoan);
+        Assert.Equal("Approved", approvedLoan.Status);
+
+        // Act - Repay Partial Amount
+        var firstInstallment = approvedLoan.RepaymentSchedule!.Installments.First();
+        var partialAmount = firstInstallment.TotalAmount / 2;
+
+        var repayResponse = await client.PostAsJsonAsync($"/loans/{loanId}/repay", new { Amount = partialAmount });
+        Assert.Equal(HttpStatusCode.Accepted, repayResponse.StatusCode);
+
+        // Verify LoanRepaymentRequested is published
+        Assert.True(await harness.Published.Any<LoanRepaymentRequested>(), "LoanRepaymentRequested event was not published");
+
+        // Simulate LoanRepaymentProcessed (Success) from external service
+        await harness.Bus.Publish(new LoanRepaymentProcessed(
+            loanId,
+            "user_123",
+            partialAmount,
+            true, // Success
+            string.Empty,
+            DateTime.UtcNow
+        ));
+
+        // Wait for LoanRepaymentProcessedConsumer to consume the event
+        Assert.True(await harness.Consumed.Any<LoanRepaymentProcessed>(), "LoanRepaymentProcessed event was not consumed");
+
+        // Verify Installment Status via API
+        LoanResponse? updatedLoan = null;
+        for (int i = 0; i < 20; i++)
+        {
+            var response = await client.GetAsync($"/loans/{loanId}");
+            var l = await response.Content.ReadFromJsonAsync<LoanResponse>();
+            
+            var inst = l!.RepaymentSchedule!.Installments.First();
+            
+            // Wait for status update or amount update
+            if (inst.PaidAmount > 0)
+            {
+                updatedLoan = l;
+                break;
+            }
+            await Task.Delay(100);
+        }
+
+        Assert.NotNull(updatedLoan);
+        var updatedInstallment = updatedLoan.RepaymentSchedule!.Installments.First();
+        Assert.Equal("PartiallyPaid", updatedInstallment.Status);
+        Assert.Equal(partialAmount, updatedInstallment.PaidAmount);
+    }
 
     [Fact]
     public async Task CreateLoan_ReturnsCreated_WhenRequestIsValid()
@@ -168,4 +275,6 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 }
 
-public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths = 12, decimal AnnualInterestRate = 0.05m);
+public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleDto? RepaymentSchedule = null);
+public record InstallmentDto(DateTime DueDate, decimal PrincipalAmount, decimal InterestAmount, decimal TotalAmount, decimal PaidAmount, string Status);
+public record RepaymentScheduleDto(List<InstallmentDto> Installments, decimal TotalInterest, decimal AnnualInterestRate);
