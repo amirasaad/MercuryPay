@@ -1,5 +1,6 @@
 using MercuryPay.LendingService.Domain;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 
 namespace MercuryPay.LendingService.Infrastructure;
 
@@ -9,6 +10,12 @@ public class LendingDbContext(DbContextOptions<LendingDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+        
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         modelBuilder.Entity<Loan>(entity =>
         {
             entity.HasKey(e => e.Id);
