@@ -5,9 +5,10 @@ public record FraudEvaluated(
     bool IsApproved,
     int RiskScore,
     string Reason,
-    DateTimeOffset Timestamp
+    DateTimeOffset Timestamp,
+    Guid? ReferenceId = null
 )
 {
     // Required for MassTransit/Serialization
-    protected FraudEvaluated() : this(default, default, default, default!, default) { }
+    protected FraudEvaluated() : this(default, default, default, default!, default, default) { }
 }

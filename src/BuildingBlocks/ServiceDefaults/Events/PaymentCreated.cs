@@ -6,9 +6,10 @@ public record PaymentCreated(
     string ToUserId,
     decimal Amount,
     string Currency,
-    DateTimeOffset Timestamp
+    DateTimeOffset Timestamp,
+    Guid? ReferenceId = null
 )
 {
     // Required for MassTransit/Serialization
-    protected PaymentCreated() : this(default, default!, default!, default, default!, default) { }
+    protected PaymentCreated() : this(default, default!, default!, default, default!, default, default) { }
 }
