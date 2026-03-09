@@ -59,6 +59,11 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
         Status = "FraudDetected";
     }
 
+    public void MarkAsInvalid()
+    {
+        Status = "Invalid";
+    }
+
     public void RetryDisbursement()
     {
         Status = "Approved";

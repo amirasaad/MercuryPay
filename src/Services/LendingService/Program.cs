@@ -70,6 +70,9 @@ else
 // Add Services
 builder.Services.AddScoped<ILendingService, LendingService>();
 
+// Register Cleanup Service
+builder.Services.AddHostedService<DataCleanupService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
