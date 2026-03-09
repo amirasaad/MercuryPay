@@ -7,6 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
+var connectionString = builder.Configuration.GetConnectionString("riskdb");
+if (!string.IsNullOrEmpty(connectionString) && !connectionString.Contains("Ssl Mode") && !connectionString.Contains("SslMode"))
+{
+    builder.Configuration["ConnectionStrings:riskdb"] = $"{connectionString};Ssl Mode=Disable";
+}
+
 builder.AddNpgsqlDbContext<RiskDbContext>("riskdb");
 
 builder.Services.AddMassTransit(x =>
@@ -38,12 +44,7 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 
 // Apply migrations automatically
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<RiskDbContext>();
-    // Apply migrations
-    context.Database.Migrate();
-}
+await app.SafeMigrateAsync<RiskDbContext>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

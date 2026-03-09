@@ -19,8 +19,14 @@ if (string.IsNullOrEmpty(connectionString))
 }
 else
 {
+    // Force disable SSL for local development with Aspire
+    if (!connectionString.Contains("Ssl Mode") && !connectionString.Contains("SslMode"))
+    {
+        builder.Configuration["ConnectionStrings:walletdb"] = $"{connectionString};Ssl Mode=Disable";
+    }
+
     builder.AddNpgsqlDbContext<WalletDbContext>("walletdb", settings => 
-        settings.DisableRetry = true); // Disable retry as Outbox handles it
+        settings.DisableRetry = false); // Enable retry for resilience
 }
 
 // Add Event Bus with Outbox configuration
@@ -89,6 +95,9 @@ app.MapGet("/routes", (IEnumerable<EndpointDataSource> endpointSources) =>
     string.Join("\n", endpointSources.SelectMany(source => source.Endpoints)));
 
 app.MapDefaultEndpoints();
+
+// Ensure database is created
+await app.SafeMigrateAsync<WalletDbContext>();
 
 app.Run();
 
