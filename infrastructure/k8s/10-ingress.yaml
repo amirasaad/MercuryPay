@@ -1,0 +1,55 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mercurypay-ingress
+  namespace: mercurypay
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Requires cert-manager
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  ingressClassName: nginx  # Requires nginx-ingress controller
+  tls:
+  - hosts:
+    - mercurypay.example.com
+    secretName: mercurypay-tls
+  rules:
+  - host: mercurypay.example.com
+    http:
+      paths:
+      - path: /api/payments
+        pathType: Prefix
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 80
+      - path: /api/wallets
+        pathType: Prefix
+        backend:
+          service:
+            name: wallet-service
+            port:
+              number: 80
+      - path: /api/loans
+        pathType: Prefix
+        backend:
+          service:
+            name: lending-service
+            port:
+              number: 80
+      - path: /api/risk
+        pathType: Prefix
+        backend:
+          service:
+            name: risk-service
+            port:
+              number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 80

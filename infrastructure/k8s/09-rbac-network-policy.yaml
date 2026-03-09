@@ -1,0 +1,68 @@
+---
+# RBAC: Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mercurypay-services
+  namespace: mercurypay
+
+---
+# RBAC: Role for service-to-service communication
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mercurypay-services
+  namespace: mercurypay
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+
+---
+# RBAC: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mercurypay-services
+  namespace: mercurypay
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: mercurypay-services
+subjects:
+- kind: ServiceAccount
+  name: mercurypay-services
+  namespace: mercurypay
+
+---
+# Network Policy: Allow intra-namespace communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mercurypay-allow-internal
+  namespace: mercurypay
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: mercurypay
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: mercurypay
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53  # DNS
+    - protocol: UDP
+      port: 53  # DNS

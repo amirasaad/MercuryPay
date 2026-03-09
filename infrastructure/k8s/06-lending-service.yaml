@@ -1,0 +1,147 @@
+---
+# Lending Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lending-service
+  namespace: mercurypay
+  labels:
+    app: lending-service
+    service: lending
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: lending-service
+  template:
+    metadata:
+      labels:
+        app: lending-service
+        service: lending
+    spec:
+      serviceAccountName: mercurypay-services
+      containers:
+      - name: lending-service
+        image: mercurypay/lending-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: ASPNETCORE_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: ASPNETCORE_ENVIRONMENT
+        - name: ConnectionStrings__LendingDb
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: LENDING_DB_CONNECTION
+        - name: Redis__Host
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: REDIS_HOST
+        - name: Redis__Port
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: REDIS_PORT
+        - name: Services__PaymentServiceUrl
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: PAYMENT_SERVICE_URL
+        - name: Services__WalletServiceUrl
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: WALLET_SERVICE_URL
+        - name: JWT__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: JWT_SECRET_KEY
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: OTEL_EXPORTER_OTLP_ENDPOINT
+        - name: OTEL_SERVICE_NAME
+          value: "lending-service"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - lending-service
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lending-service
+  namespace: mercurypay
+  labels:
+    app: lending-service
+spec:
+  type: ClusterIP
+  selector:
+    app: lending-service
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
