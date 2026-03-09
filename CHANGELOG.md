@@ -5,6 +5,39 @@
 <a name="1.3.1"></a>
 <a name="1.4.0"></a>
 <a name="1.5.0"></a>
+<a name="1.6.0"></a>
+# [1.6.0](https://github.com/user/MercuryPay/compare/v1.5.0...v1.6.0) (2026-03-09)
+
+
+### ✅ Tests
+
+* **suite:** add comprehensive unit and E2E tests for risk and loan workflows ([6198777](https://github.com/user/MercuryPay/commit/6198777))
+
+
+### ✨ Features
+
+* **database:** add outbox migrations and enhance migration resilience ([ef04624](https://github.com/user/MercuryPay/commit/ef04624))
+* **events:** add ReferenceId to payment and fraud events ([8037b16](https://github.com/user/MercuryPay/commit/8037b16))
+* **lending:** handle fraud evaluation for loan disbursements ([09ddaa2](https://github.com/user/MercuryPay/commit/09ddaa2))
+* **payment:** implement ReferenceId for payment tracking ([055dbaf](https://github.com/user/MercuryPay/commit/055dbaf))
+* **risk:** propagate ReferenceId in fraud evaluation ([94be9de](https://github.com/user/MercuryPay/commit/94be9de))
+* **services:** implement core loan repayment and risk evaluation logic ([3c13014](https://github.com/user/MercuryPay/commit/3c13014))
+
+
+### 🐛 Bug Fixes
+
+* **masstransit:** resolve configuration and license issues ([5e3b87d](https://github.com/user/MercuryPay/commit/5e3b87d))
+
+
+### 📝 Documentation
+
+* **requirements:** update traceability matrix for implemented features ([8488be0](https://github.com/user/MercuryPay/commit/8488be0))
+
+
+### 🔨 Chores
+
+* **config:** replace custom commitlint rules with gitmoji preset ([b06c732](https://github.com/user/MercuryPay/commit/b06c732))
+
 # [1.5.0](https://github.com/user/MercuryPay/compare/v1.4.0...v1.5.0) (2026-03-09)
 
 
