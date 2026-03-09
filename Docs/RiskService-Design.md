@@ -40,17 +40,18 @@ The service uses **PostgreSQL** with **Entity Framework Core** for data persiste
 ### Rule Engine (v1 - Simple)
 
 The initial implementation uses a hardcoded rule set for simplicity:
-1.  **High Value**: Transactions > $10,000 are rejected (Score: 90).
-2.  **Suspicious User**: Users with IDs starting with "suspicious" are rejected (Score: 80).
-3.  **Default**: All other transactions are approved (Score: 10).
+
+1. **High Value**: Transactions > $10,000 are rejected (Score: 90).
+2. **Suspicious User**: Users with IDs starting with "suspicious" are rejected (Score: 80).
+3. **Default**: All other transactions are approved (Score: 10).
 
 ### Event Flow
 
-1.  **Consume**: Listens for `PaymentCreated` events from the Payment Service.
-2.  **Evaluate**: Applies the rule engine to the payment details.
-3.  **Persist**: Saves the `RiskAssessment` to the database.
-4.  **Publish**: Emits a `FraudEvaluated` event using the transactional outbox.
+1. **Consume**: Listens for `PaymentCreated` events from the Payment Service.
+2. **Evaluate**: Applies the rule engine to the payment details.
+3. **Persist**: Saves the `RiskAssessment` to the database.
+4. **Publish**: Emits a `FraudEvaluated` event using the transactional outbox.
 
 ## 5. API Specification
 
-*(Future Scope: The Risk Service currently operates purely as a background worker. An API for manual review and configuration will be added in Phase 2.)*
+**Future Scope**: The Risk Service currently operates purely as a background worker. An API for manual review and configuration will be added in Phase 2.

@@ -72,7 +72,7 @@ The Wallet Service is responsible for managing user wallets, balances, and doubl
 
 ### Event Consumers
 
-- **PaymentCreated**: 
+- **PaymentCreated**:
   - **Source**: Payment Service.
   - **Action**: Handles all funds transfers (P2P payments, Loan Disbursements).
   - **Logic**: Debits sender wallet, credits receiver wallet. Auto-provisions wallets if they don't exist.
