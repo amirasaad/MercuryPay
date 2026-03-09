@@ -4,6 +4,42 @@
 <a name="1.3.0"></a>
 <a name="1.3.1"></a>
 <a name="1.4.0"></a>
+<a name="1.5.0"></a>
+# [1.5.0](https://github.com/user/MercuryPay/compare/v1.4.0...v1.5.0) (2026-03-09)
+
+
+### ✅ Tests
+
+* **e2e:** relax auth validation and increase keycloak timeout ([a0b2194](https://github.com/user/MercuryPay/commit/a0b2194))
+* **e2e:** stabilize aspire infra ([5043820](https://github.com/user/MercuryPay/commit/5043820))
+* **perf:** update NBomber benchmarks and fix default port ([a998799](https://github.com/user/MercuryPay/commit/a998799))
+
+
+### ✨ Features
+
+* **auth:** allow dev auth bypass without token ([0254d8d](https://github.com/user/MercuryPay/commit/0254d8d))
+* **lending:** implement partial repayment flow ([1eaa764](https://github.com/user/MercuryPay/commit/1eaa764))
+* **lending:** implement partial repayment logic and fix test stability ([7e93933](https://github.com/user/MercuryPay/commit/7e93933))
+* **lending:** implement partial repayment logic and UI ([6ea9b07](https://github.com/user/MercuryPay/commit/6ea9b07))
+
+
+### 🐛 Bug Fixes
+
+* **db:** harden service migrations and retries ([5498974](https://github.com/user/MercuryPay/commit/5498974))
+* **risk:** flush outbox after publish ([0d6c38d](https://github.com/user/MercuryPay/commit/0d6c38d))
+* **risk:** use Migrate() for DB init ([0d0722d](https://github.com/user/MercuryPay/commit/0d0722d))
+
+
+### 📝 Documentation
+
+* update service design notes ([2056e09](https://github.com/user/MercuryPay/commit/2056e09))
+
+
+### 🔨 Chores
+
+* **apphost,defaults,lending:** apply dev best practices ([977f6ed](https://github.com/user/MercuryPay/commit/977f6ed))
+* **logging:** disable EF Core logs in development ([61a229a](https://github.com/user/MercuryPay/commit/61a229a))
+
 # [1.4.0](https://github.com/user/MercuryPay/compare/v1.3.1...v1.4.0) (2026-03-08)
 
 
