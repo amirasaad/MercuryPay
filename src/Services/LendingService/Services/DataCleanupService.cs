@@ -1,5 +1,7 @@
 using MercuryPay.LendingService.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
+using MercuryPay.BuildingBlocks.Events;
 
 namespace MercuryPay.LendingService.Services;
 
@@ -17,6 +19,7 @@ public class DataCleanupService(IServiceProvider serviceProvider, ILogger<DataCl
         {
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<LendingDbContext>();
+            var publishEndpoint = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
 
             // Ensure database is ready
             await context.Database.EnsureCreatedAsync(stoppingToken);
@@ -38,6 +41,13 @@ public class DataCleanupService(IServiceProvider serviceProvider, ILogger<DataCl
                 {
                     _logger.LogInformation("Invalidating Loan {LoanId} with amount {Amount}", loan.Id, loan.Amount);
                     loan.MarkAsInvalid();
+                    
+                    // Publish LoanInvalidated event
+                    await publishEndpoint.Publish(new LoanInvalidated(
+                        loan.Id,
+                        $"Loan amount {loan.Amount} exceeds limit of {MaxLoanAmount}",
+                        DateTimeOffset.UtcNow
+                    ), stoppingToken);
                 }
 
                 await context.SaveChangesAsync(stoppingToken);
