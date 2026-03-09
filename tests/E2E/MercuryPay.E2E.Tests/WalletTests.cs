@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace MercuryPay.E2E.Tests;
 
-public class WalletTests : IAsyncLifetime
+public partial class WalletTests : IAsyncLifetime
 {
     private IPlaywright _playwright = null!;
     private IBrowser _browser = null!;
@@ -107,7 +107,7 @@ public class WalletTests : IAsyncLifetime
         await loginLink.ClickAsync();
 
         // Wait for Keycloak
-        await _page.WaitForURLAsync(new Regex(".*realms/mercury.*"), new PageWaitForURLOptions { Timeout = 120000 });
+        await _page.WaitForURLAsync(MyRegex(), new PageWaitForURLOptions { Timeout = 120000 });
         
         // Fill Form
         await _page.WaitForSelectorAsync("#username");
@@ -142,4 +142,7 @@ public class WalletTests : IAsyncLifetime
         }
         throw new TimeoutException("Keycloak did not start in time.");
     }
+
+    [GeneratedRegex(".*realms/mercury.*")]
+    private static partial Regex MyRegex();
 }

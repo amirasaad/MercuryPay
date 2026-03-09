@@ -79,6 +79,7 @@ public class LoanWorkflowTests : IAsyncLifetime
 
         // 7. Check Wallet Balance (should be debited back to 0)
         wallet = await WaitForWalletBalanceAsync(walletClient, userId, currency, 0);
+        Assert.NotNull(wallet);
         Assert.Equal(0, wallet.Balance);
     }
 

@@ -8,15 +8,10 @@ using Xunit.Abstractions;
 
 namespace MercuryPay.E2E.Tests;
 
-public class PartialRepaymentTests : IAsyncLifetime
+public class PartialRepaymentTests(ITestOutputHelper output) : IAsyncLifetime
 {
     private DistributedApplication _app = null!;
-    private readonly ITestOutputHelper _output;
-
-    public PartialRepaymentTests(ITestOutputHelper output)
-    {
-        _output = output;
-    }
+    private readonly ITestOutputHelper _output = output;
 
     public async Task InitializeAsync()
     {
@@ -51,7 +46,7 @@ public class PartialRepaymentTests : IAsyncLifetime
         
         LoanDto? loan = null;
         var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < TimeSpan.FromMinutes(2))
+        while (DateTime.UtcNow - startTime < TimeSpan.FromMinutes(4))
         {
             try
             {

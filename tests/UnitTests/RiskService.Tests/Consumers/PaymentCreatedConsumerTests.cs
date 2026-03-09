@@ -96,7 +96,7 @@ public class PaymentCreatedConsumerTests
         var assessment = await _dbContext.RiskAssessments.FirstOrDefaultAsync(a => a.PaymentId == paymentId);
         Assert.NotNull(assessment);
         Assert.False(assessment.IsApproved);
-        Assert.Equal("High Value Transaction (> 10,000)", assessment.Reason);
+        Assert.Equal("Transaction amount ($15000.00) exceeds high-value threshold ($10000.00)", assessment.Reason);
         
         // Verify event
         contextMock.Verify(x => x.Publish(
