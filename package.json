@@ -81,6 +81,12 @@
           "code": ":rewind:",
           "description": "Reverts a previous commit",
           "name": "revert"
+        },
+        {
+          "emoji": "🧱",
+          "code": ":bricks:",
+          "description": "Infrastructure related changes",
+          "name": "infra"
         }
       ]
     }
@@ -98,6 +104,7 @@
     "@simple-release/core": "^2.4.0",
     "@simple-release/npm": "^2.3.0",
     "commitizen": "^4.3.1",
+    "commitlint-config-gitmoji": "^2.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "conventional-changelog-cz-emoji": "^2.0.1",
     "cz-emoji": "^1.3.2-canary.2",
