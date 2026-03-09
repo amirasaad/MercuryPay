@@ -48,12 +48,6 @@ if (string.IsNullOrEmpty(connectionString))
 }
 else
 {
-    if (!connectionString.Contains("Ssl Mode") && !connectionString.Contains("SslMode"))
-    {
-        builder.Configuration["ConnectionStrings:lendingdb"] = $"{connectionString};Ssl Mode=Disable";
-        connectionString = builder.Configuration.GetConnectionString("lendingdb");
-    }
-
     builder.Services.AddDbContext<LendingDbContext>(options =>
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {

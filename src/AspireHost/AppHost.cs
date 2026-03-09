@@ -1,8 +1,8 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgresBuilder = builder.AddPostgres("postgres");
-var useEphemeral = string.Equals(Environment.GetEnvironmentVariable("ASPIRE_EPHEMERAL_POSTGRES"), "true", StringComparison.OrdinalIgnoreCase);
-var volumeName = useEphemeral ? $"mercurypay-postgres-{Guid.NewGuid():N}" : "mercurypay-postgres-data-v3";
+var ephemeral = Environment.GetEnvironmentVariable("ASPIRE_EPHEMERAL_POSTGRES") == "true";
+var volumeName = ephemeral ? $"mercurypay-postgres-data-{Guid.NewGuid():N}" : "mercurypay-postgres-data";
 var postgres = postgresBuilder
     .WithDataVolume(volumeName)
     .WithPgAdmin();
@@ -26,14 +26,16 @@ var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("pay
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
-    .WithEnvironment("Identity__DisableAuthValidation", "true");
+    .WithEnvironment("Identity__DisableAuthValidation", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
     .WithReference(walletDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
-    .WithEnvironment("Identity__DisableAuthValidation", "true");
+    .WithEnvironment("Identity__DisableAuthValidation", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
     .WithReference(lendingDb)
@@ -49,7 +51,8 @@ var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservi
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
-    .WithEnvironment("Identity__DisableAuthValidation", "true");
+    .WithEnvironment("Identity__DisableAuthValidation", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
     .WithReference(paymentService)

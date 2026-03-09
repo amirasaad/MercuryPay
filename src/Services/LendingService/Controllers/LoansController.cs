@@ -13,7 +13,6 @@ public class LoansController(ILendingService lendingService) : ControllerBase
 {
     private readonly ILendingService _lendingService = lendingService;
 
-    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateLoanRequest request)
     {
@@ -32,7 +31,6 @@ public class LoansController(ILendingService lendingService) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = loan.Id }, MapToResponse(loan));
     }
 
-    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid id)
     {
@@ -107,7 +105,6 @@ public class LoansController(ILendingService lendingService) : ControllerBase
         return Accepted();
     }
 
-    [AllowAnonymous]
     [HttpPost("{id}/repay")]
     public async Task<IActionResult> Repay(Guid id, [FromBody] RepayLoanRequest request)
     {

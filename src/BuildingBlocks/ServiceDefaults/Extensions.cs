@@ -3,11 +3,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.ServiceDiscovery;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.JsonWebTokens;
-using System.Security.Claims;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -59,27 +56,6 @@ public static class Extensions
                     options.Configuration = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration
                     {
                         Issuer = "dummy"
-                    };
-
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
-                        {
-                            // If auth validation is disabled and no token is provided, inject a development principal
-                            var hasAuthHeader = context.Request.Headers.ContainsKey("Authorization");
-                            if (!hasAuthHeader)
-                            {
-                                var identity = new ClaimsIdentity(new[]
-                                {
-                                    new Claim(ClaimTypes.NameIdentifier, "alice"),
-                                    new Claim(ClaimTypes.Name, "alice")
-                                }, JwtBearerDefaults.AuthenticationScheme);
-
-                                context.Principal = new ClaimsPrincipal(identity);
-                                context.Success();
-                            }
-                            return Task.CompletedTask;
-                        }
                     };
                 }
             });
