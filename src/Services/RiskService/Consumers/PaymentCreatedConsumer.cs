@@ -41,5 +41,8 @@ public partial class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logg
             assessment.Reason,
             DateTimeOffset.UtcNow
         ));
+        
+        // Ensure EF Outbox dispatches the published message within the same unit of work
+        await dbContext.SaveChangesAsync();
     }
 }
