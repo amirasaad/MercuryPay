@@ -22,6 +22,7 @@ builder.AddEventBus(x =>
     x.AddConsumer<LoanApprovedFaultConsumer>();
     x.AddConsumer<LoanCreatedConsumer>();
     x.AddConsumer<LoanRepaymentProcessedConsumer>();
+    x.AddConsumer<FraudEvaluatedConsumer>();
 
     var connectionString = builder.Configuration.GetConnectionString("lendingdb");
     if (!string.IsNullOrEmpty(connectionString))
