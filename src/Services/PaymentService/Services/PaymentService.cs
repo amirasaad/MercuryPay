@@ -34,7 +34,6 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
         var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending");
 
         await _context.Payments.AddAsync(payment);
-        await _context.SaveChangesAsync();
         
         // Publish event (will be captured by Outbox)
         await _publishEndpoint.Publish(new PaymentCreated(

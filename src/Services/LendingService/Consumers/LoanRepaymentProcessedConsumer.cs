@@ -24,6 +24,7 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
         // Actually, RepaymentSchedule is the property name.
         var loan = await _context.Loans
             .Include(l => l.RepaymentSchedule)
+            .ThenInclude(rs => rs.Installments)
             .FirstOrDefaultAsync(l => l.Id == message.LoanId);
 
         if (loan == null)

@@ -11,6 +11,7 @@ public interface IWalletService
     IEnumerable<Wallet> GetWalletsByUserId(string userId);
     void CreditWallet(Guid id, decimal amount);
     void DebitWallet(Guid id, decimal amount);
+    Task DebitWalletAsync(Guid id, decimal amount, bool saveChanges = true);
 }
 
 public class WalletService(WalletDbContext context, ILogger<WalletService> logger) : IWalletService
@@ -83,6 +84,27 @@ public class WalletService(WalletDbContext context, ILogger<WalletService> logge
 
         domainWallet.Debit(amount, Guid.NewGuid().ToString(), "Manual Debit");
         _context.SaveChanges();
+        
+        _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+    }
+
+    public async Task DebitWalletAsync(Guid id, decimal amount, bool saveChanges = true)
+    {
+        _logger.LogInformation("Debiting wallet {WalletId} with amount {Amount}", id, amount);
+        
+        var domainWallet = await _context.Wallets.FindAsync(id);
+        if (domainWallet == null) 
+        {
+            _logger.LogWarning("Wallet {WalletId} not found for debit operation", id);
+            throw new KeyNotFoundException("Wallet not found");
+        }
+
+        domainWallet.Debit(amount, Guid.NewGuid().ToString(), "Manual Debit");
+        
+        if (saveChanges)
+        {
+            await _context.SaveChangesAsync();
+        }
         
         _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
     }

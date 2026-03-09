@@ -15,8 +15,10 @@ var riskDb = postgres.AddDatabase("riskdb");
 var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
 
+var keycloakVolumeName = ephemeral ? $"mercurypay-keycloak-data-{Guid.NewGuid():N}" : "mercurypay-keycloak-data";
+
 var keycloak = builder.AddKeycloak("keycloak", 8080)
-    .WithDataVolume()
+    .WithDataVolume(keycloakVolumeName)
     .WithRealmImport("./realms");
 
 var keycloakEndpoint = keycloak.GetEndpoint("http");

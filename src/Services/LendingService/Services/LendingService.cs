@@ -42,7 +42,6 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         loan.GenerateRepaymentSchedule();
         
         _context.Loans.Add(loan);
-        await _context.SaveChangesAsync();
         
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -57,6 +56,8 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             loan.Currency,
             DateTimeOffset.UtcNow
         ));
+        
+        await _context.SaveChangesAsync();
         
         return loan;
     }
@@ -87,7 +88,6 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         }
 
         loan.RetryDisbursement();
-        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Retrying disbursement for Loan {LoanId}", loanId);
 
@@ -99,6 +99,8 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             loan.Currency,
             DateTimeOffset.UtcNow
         ));
+
+        await _context.SaveChangesAsync();
 
         return true;
     }
@@ -114,7 +116,7 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             return false;
         }
 
-        if (loan.Status != "Approved")
+        if (loan.Status != "Approved" && loan.Status != "Active")
         {
             _logger.LogWarning("Loan {LoanId} status is {Status}, cannot repay", loanId, loan.Status);
             return false;
@@ -122,7 +124,6 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
 
         // Update status
         loan.MarkAsRepaymentProcessing();
-        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Initiating repayment for Loan {LoanId} Amount {Amount}", loanId, amount);
 
@@ -134,6 +135,8 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             loan.Currency,
             DateTimeOffset.UtcNow
         ));
+
+        await _context.SaveChangesAsync();
 
         return true;
     }

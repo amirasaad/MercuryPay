@@ -23,14 +23,14 @@ public partial class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logg
         
         LogEvaluatingRisk(logger, message.PaymentId, message.Amount, message.Currency);
 
-        // 1. Evaluate Risk
-        var assessment = RiskAssessment.Evaluate(message.PaymentId, message.Amount, message.FromUserId);
+        // 1. Evaluate Risk (using the new Rule Engine)
+        var assessment = RiskAssessment.Evaluate(message.PaymentId, message.Amount, message.FromUserId, message.ToUserId);
 
         LogRiskAssessment(logger, message.PaymentId, assessment.IsApproved, assessment.RiskScore, assessment.Reason);
 
         // 2. Save assessment to database
         dbContext.RiskAssessments.Add(assessment);
-        await dbContext.SaveChangesAsync();
+        // await dbContext.SaveChangesAsync(); // Removed to ensure atomicity with Outbox
 
         // 3. Publish FraudEvaluated Event
         LogPublishingFraudEvaluated(logger, message.PaymentId);
@@ -43,6 +43,7 @@ public partial class PaymentCreatedConsumer(ILogger<PaymentCreatedConsumer> logg
         ));
         
         // Ensure EF Outbox dispatches the published message within the same unit of work
+        // This saves both the entity and the outbox message in a single transaction
         await dbContext.SaveChangesAsync();
     }
 }
