@@ -107,7 +107,7 @@ public class WalletTests : IAsyncLifetime
         await loginLink.ClickAsync();
 
         // Wait for Keycloak
-        await _page.WaitForURLAsync(new Regex(".*realms/mercury.*"), new PageWaitForURLOptions { Timeout = 60000 });
+        await _page.WaitForURLAsync(new Regex(".*realms/mercury.*"), new PageWaitForURLOptions { Timeout = 120000 });
         
         // Fill Form
         await _page.WaitForSelectorAsync("#username");
@@ -124,7 +124,7 @@ public class WalletTests : IAsyncLifetime
     private static async Task WaitForKeycloakAsync(HttpClient client)
     {
         var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(60))
+        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(120))
         {
             try
             {

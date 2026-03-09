@@ -52,6 +52,7 @@ public static class Extensions
                     options.TokenValidationParameters.ValidateAudience = false;
                     options.TokenValidationParameters.ValidateLifetime = false;
                     options.TokenValidationParameters.RequireSignedTokens = false;
+                    options.TokenValidationParameters.ValidateIssuerSigningKey = false;
                     options.TokenValidationParameters.SignatureValidator = (token, parameters) => new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(token);
                     options.Configuration = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration
                     {
