@@ -23,6 +23,17 @@ builder.AddEventBus(x =>
     x.AddConsumer<LoanCreatedConsumer>();
     x.AddConsumer<LoanRepaymentProcessedConsumer>();
 
+    var connectionString = builder.Configuration.GetConnectionString("lendingdb");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        x.AddEntityFrameworkOutbox<LendingDbContext>(o =>
+        {
+            o.QueryDelay = TimeSpan.FromSeconds(1);
+            o.UseBusOutbox();
+            o.UsePostgres();
+        });
+    }
+
     var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
     if (!string.IsNullOrEmpty(messagingConnectionString))
     {

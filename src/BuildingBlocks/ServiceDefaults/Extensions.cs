@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,8 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using MassTransit;
+using System.Security.Claims;
+using System.Security.Principal;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -29,6 +32,8 @@ public static class Extensions
             return builder;
         }
 
+        var disableAuth = identitySection.GetValue<bool>("DisableAuthValidation");
+
         // Prevent mapping "sub" claim to nameidentifier.
         // JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
 
@@ -42,8 +47,6 @@ public static class Extensions
                 options.Audience = audience;
                 options.TokenValidationParameters.ValidateAudience = false; 
                 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-
-                var disableAuth = identitySection.GetValue<bool>("DisableAuthValidation");
 
                 if (builder.Environment.IsDevelopment() && disableAuth)
                 {
@@ -62,7 +65,7 @@ public static class Extensions
             });
 
         builder.Services.AddAuthorization();
-
+        
         return builder;
     }
 
@@ -217,7 +220,43 @@ public static class Extensions
                 Predicate = r => r.Tags.Contains("live")
             });
         }
+        
+        // Add dev auth bypass middleware if in development with auth disabled
+        // Check if Identity section exists and DisableAuthValidation is set
+        var identitySection = app.Configuration.GetSection("Identity");
+        if (identitySection.Exists())
+        {
+            var disableAuth = identitySection.GetValue<bool>("DisableAuthValidation");
+            if (app.Environment.IsDevelopment() && disableAuth)
+            {
+                app.UseMiddleware<DevAuthBypassMiddleware>();
+            }
+        }
 
         return app;
+    }
+}
+
+public class DevAuthBypassMiddleware(RequestDelegate next)
+{
+    private readonly RequestDelegate _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // If no auth header is present, create a default identity for development
+        if (!context.Request.Headers.Authorization.Any())
+        {
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "dev-user"),
+                new Claim(ClaimTypes.Name, "dev-user"),
+                new Claim(ClaimTypes.Role, "User")
+            };
+            var identity = new ClaimsIdentity(claims, "Dev");
+            var principal = new ClaimsPrincipal(identity);
+            context.User = principal;
+        }
+        
+        await _next(context);
     }
 }

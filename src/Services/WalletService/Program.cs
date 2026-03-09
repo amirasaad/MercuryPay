@@ -56,13 +56,6 @@ builder.AddEventBus(x =>
             cfg.ConfigureEndpoints(context);
         });
     }
-    else
-    {
-        x.UsingInMemory((context, cfg) =>
-        {
-            cfg.ConfigureEndpoints(context);
-        });
-    }
 });
 
 builder.Services.AddProblemDetails();
