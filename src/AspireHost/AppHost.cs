@@ -1,7 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume()
+var postgresBuilder = builder.AddPostgres("postgres");
+var useEphemeral = string.Equals(Environment.GetEnvironmentVariable("ASPIRE_EPHEMERAL_POSTGRES"), "true", StringComparison.OrdinalIgnoreCase);
+var volumeName = useEphemeral ? $"mercurypay-postgres-{Guid.NewGuid():N}" : "mercurypay-postgres-data-v3";
+var postgres = postgresBuilder
+    .WithDataVolume(volumeName)
     .WithPgAdmin();
 
 var paymentDb = postgres.AddDatabase("paymentdb");
@@ -22,13 +25,15 @@ var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("pay
     .WithReference(paymentDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
-    .WithEnvironment("Identity__Audience", "account");
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "true");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
     .WithReference(walletDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
-    .WithEnvironment("Identity__Audience", "account");
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "true");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
     .WithReference(lendingDb)
@@ -36,13 +41,15 @@ var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("len
     .WithReference(keycloak)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
-    .WithEnvironment("Identity__DisableAuthValidation", "true");
+    .WithEnvironment("Identity__DisableAuthValidation", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
     .WithReference(riskDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
-    .WithEnvironment("Identity__Audience", "account");
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "true");
 
 builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
     .WithReference(paymentService)

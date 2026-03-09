@@ -121,7 +121,7 @@ public class WalletTests : IAsyncLifetime
         await _page.WaitForSelectorAsync("text=Hello,", new PageWaitForSelectorOptions { Timeout = 30000 });
     }
 
-    private async Task WaitForKeycloakAsync(HttpClient client)
+    private static async Task WaitForKeycloakAsync(HttpClient client)
     {
         var startTime = DateTime.UtcNow;
         while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(60))
