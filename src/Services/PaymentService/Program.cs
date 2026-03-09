@@ -36,6 +36,7 @@ builder.AddEventBus((x) =>
     
     x.AddConsumer<LoanApprovedConsumer>();
     x.AddConsumer<FraudEvaluatedConsumer>();
+    x.AddConsumer<LoanInvalidatedConsumer>();
 
     var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
     if (!string.IsNullOrEmpty(messagingConnectionString))
