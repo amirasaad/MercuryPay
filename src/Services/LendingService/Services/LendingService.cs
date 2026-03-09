@@ -21,6 +21,7 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
     private readonly ILogger<LendingService> _logger = logger;
     private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
     private const decimal DefaultAnnualInterestRate = 0.05m; // 5% Fixed for MVP
+    private const decimal MaxLoanAmount = 100000m;
 
     public async Task<Loan> CreateLoan(string userId, decimal amount, string currency, int termMonths)
     {
@@ -28,6 +29,12 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         {
             _logger.LogWarning("Invalid loan amount: {Amount}", amount);
             throw new ArgumentException("Amount must be positive");
+        }
+
+        if (amount > MaxLoanAmount)
+        {
+            _logger.LogWarning("Loan amount {Amount} exceeds maximum limit of {MaxAmount}", amount, MaxLoanAmount);
+            throw new ArgumentException($"Loan amount exceeds maximum limit of {MaxLoanAmount}");
         }
 
         if (termMonths <= 0 || termMonths > 120)

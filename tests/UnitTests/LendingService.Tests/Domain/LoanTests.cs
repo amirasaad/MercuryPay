@@ -84,4 +84,45 @@ public class LoanTests
         Assert.All(loan.RepaymentSchedule.Installments, i => Assert.Equal("Paid", i.Status));
         Assert.Equal("Repaid", loan.Status);
     }
+
+    [Fact]
+    public void ProcessRepayment_ShouldHandleMultipleInstallmentsPayment()
+    {
+        // Arrange
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        loan.GenerateRepaymentSchedule();
+        
+        var firstInstallment = loan.RepaymentSchedule!.Installments[0];
+        var secondInstallment = loan.RepaymentSchedule!.Installments[1];
+        
+        var paymentAmount = firstInstallment.TotalAmount + secondInstallment.TotalAmount;
+
+        // Act
+        loan.ProcessRepayment(paymentAmount);
+
+        // Assert
+        Assert.Equal("Paid", loan.RepaymentSchedule.Installments[0].Status);
+        Assert.Equal("Paid", loan.RepaymentSchedule.Installments[1].Status);
+        Assert.Equal("Pending", loan.RepaymentSchedule.Installments[2].Status);
+        Assert.Equal("Active", loan.Status);
+    }
+
+    [Fact]
+    public void ProcessRepayment_ShouldHandleOverpayment_ByMarkingAllPaid()
+    {
+        // Arrange
+        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", "Approved", DateTime.UtcNow, 1, 0.05m);
+        loan.GenerateRepaymentSchedule();
+        var totalAmount = loan.RepaymentSchedule!.Installments.Sum(i => i.TotalAmount);
+        var overpaymentAmount = totalAmount + 50m;
+
+        // Act
+        loan.ProcessRepayment(overpaymentAmount);
+
+        // Assert
+        Assert.All(loan.RepaymentSchedule.Installments, i => Assert.Equal("Paid", i.Status));
+        Assert.Equal("Repaid", loan.Status);
+        // Note: Current implementation swallows overpayment. 
+        // In a real system, we might want to track this or refund it, but for now we ensure it doesn't break logic.
+    }
 }
