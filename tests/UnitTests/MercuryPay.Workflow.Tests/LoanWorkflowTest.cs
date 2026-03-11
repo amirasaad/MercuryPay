@@ -9,32 +9,20 @@ using MercuryPay.LendingService.Consumers;
 using MercuryPay.LendingService.Domain;
 using MercuryPay.LendingService.Infrastructure;
 using MercuryPay.LendingService.Services;
+using MercuryPay.PaymentService.Infrastructure;
+using MercuryPay.PaymentService.Services;
 using MercuryPay.WalletService.Consumers;
 using MercuryPay.WalletService.Infrastructure;
 using MercuryPay.WalletService.Services;
-using MercuryPay.PaymentService.Consumers;
-using MercuryPay.PaymentService.Infrastructure;
-using MercuryPay.PaymentService.Services;
-using MercuryPay.PaymentService.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace MercuryPay.Workflow.Tests;
 
 public class LoanWorkflowTests
 {
-    private SqliteConnection CreateAndOpenConnection(string dbName)
-    {
-        // Use shared cache to allow multiple connections to the same in-memory DB
-        var connectionString = $"DataSource={dbName};mode=memory;cache=shared";
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
-        return connection;
-    }
-
     [Fact]
     public async Task LoanWorkflow_FullCycle_InMemory_ShouldSucceed()
     {
@@ -42,20 +30,16 @@ public class LoanWorkflowTests
         var walletDbName = "Wallet_" + Guid.NewGuid();
         var paymentDbName = "Payment_" + Guid.NewGuid();
 
-        using var lendingKeepAlive = CreateAndOpenConnection(lendingDbName);
-        using var walletKeepAlive = CreateAndOpenConnection(walletDbName);
-        using var paymentKeepAlive = CreateAndOpenConnection(paymentDbName);
-
         // 1. Setup DI
         var services = new ServiceCollection();
 
         // Logging
         services.AddLogging(builder => builder.AddConsole());
 
-        // DbContexts (Sqlite with shared cache)
-        services.AddDbContext<LendingDbContext>(options => options.UseSqlite(lendingKeepAlive.ConnectionString));
-        services.AddDbContext<WalletDbContext>(options => options.UseSqlite(walletKeepAlive.ConnectionString));
-        services.AddDbContext<PaymentDbContext>(options => options.UseSqlite(paymentKeepAlive.ConnectionString));
+        // DbContexts (EF InMemory)
+        services.AddDbContext<LendingDbContext>(options => options.UseInMemoryDatabase(lendingDbName));
+        services.AddDbContext<WalletDbContext>(options => options.UseInMemoryDatabase(walletDbName));
+        services.AddDbContext<PaymentDbContext>(options => options.UseInMemoryDatabase(paymentDbName));
 
         // Domain Services
         services.AddScoped<ILendingService, LendingService.Services.LendingService>();
@@ -101,9 +85,10 @@ public class LoanWorkflowTests
             var userId = "user-workflow-1";
             var amount = 1000m;
             var currency = "USD";
+            var termMonths = 12;
 
             // Action: Create Loan
-            var loan = await lendingService.CreateLoan(userId, amount, currency);
+            var loan = await lendingService.CreateLoan(userId, amount, currency, termMonths);
 
             Assert.NotNull(loan);
             Assert.Equal("Processing", loan.Status);
@@ -126,6 +111,8 @@ public class LoanWorkflowTests
             // Wait for PaymentCreatedConsumer (Wallet Service) to consume
             Assert.True(await harness.Consumed.Any<PaymentCreated>(), "PaymentCreated event should be consumed by WalletService");
 
+            decimal totalDue;
+
             // Verification: Check Wallet Balance
             using (var verifyScope = provider.CreateScope())
             {
@@ -137,9 +124,14 @@ public class LoanWorkflowTests
                 
                 // Check Loan Status in DB
                 var db = verifyScope.ServiceProvider.GetRequiredService<LendingDbContext>();
-                var l = await db.Loans.FindAsync(loan.Id);
+                var l = await db.Loans
+                    .Include(x => x.RepaymentSchedule)
+                    .ThenInclude(rs => rs!.Installments)
+                    .FirstOrDefaultAsync(x => x.Id == loan.Id);
                 Assert.NotNull(l);
                 Assert.Equal("Approved", l.Status);
+                totalDue = l.RepaymentSchedule?.Installments.Sum(i => i.TotalAmount) ?? amount;
+                totalDue = Math.Ceiling(totalDue * 100m) / 100m;
                 
                 // Check Payment Status in DB
                 var pdb = verifyScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
@@ -150,10 +142,20 @@ public class LoanWorkflowTests
 
             // 4. Repayment Flow
             // Action: Repay Loan
+            if (totalDue > amount)
+            {
+                using var topUpScope = provider.CreateScope();
+                var ws = topUpScope.ServiceProvider.GetRequiredService<IWalletService>();
+                var wallets = ws.GetWalletsByUserId(userId);
+                var w = wallets.FirstOrDefault(w => w.Currency == currency);
+                Assert.NotNull(w);
+                ws.CreditWallet(w!.Id, totalDue - amount);
+            }
+
             using (var repayScope = provider.CreateScope())
             {
                 var repayService = repayScope.ServiceProvider.GetRequiredService<ILendingService>();
-                var repayResult = await repayService.RepayLoan(loan.Id);
+                var repayResult = await repayService.RepayLoan(loan.Id, totalDue);
                 Assert.True(repayResult, "RepayLoan should return true");
             }
 
@@ -197,16 +199,12 @@ public class LoanWorkflowTests
         var walletDbName = "Wallet_" + Guid.NewGuid();
         var paymentDbName = "Payment_" + Guid.NewGuid();
 
-        using var lendingKeepAlive = CreateAndOpenConnection(lendingDbName);
-        using var walletKeepAlive = CreateAndOpenConnection(walletDbName);
-        using var paymentKeepAlive = CreateAndOpenConnection(paymentDbName);
-
         // 1. Setup DI
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole());
-        services.AddDbContext<LendingDbContext>(options => options.UseSqlite(lendingKeepAlive.ConnectionString));
-        services.AddDbContext<WalletDbContext>(options => options.UseSqlite(walletKeepAlive.ConnectionString));
-        services.AddDbContext<PaymentDbContext>(options => options.UseSqlite(paymentKeepAlive.ConnectionString));
+        services.AddDbContext<LendingDbContext>(options => options.UseInMemoryDatabase(lendingDbName));
+        services.AddDbContext<WalletDbContext>(options => options.UseInMemoryDatabase(walletDbName));
+        services.AddDbContext<PaymentDbContext>(options => options.UseInMemoryDatabase(paymentDbName));
         
         services.AddScoped<ILendingService, LendingService.Services.LendingService>();
         services.AddScoped<IWalletService, WalletService.Services.WalletService>();
@@ -241,9 +239,10 @@ public class LoanWorkflowTests
             var userId = "user-fail-1";
             var amount = 1000m;
             var currency = "USD";
+            var termMonths = 12;
 
             // 1. Create and Disburse Loan
-            var loan = await lendingService.CreateLoan(userId, amount, currency);
+            var loan = await lendingService.CreateLoan(userId, amount, currency, termMonths);
             Assert.True(await harness.Published.Any<LoanCreated>());
             Assert.True(await harness.Consumed.Any<LoanCreated>()); // Approves
             Assert.True(await harness.Published.Any<LoanApproved>());
@@ -270,7 +269,7 @@ public class LoanWorkflowTests
             using (var repayScope = provider.CreateScope())
             {
                 var service = repayScope.ServiceProvider.GetRequiredService<ILendingService>();
-                await service.RepayLoan(loan.Id);
+                await service.RepayLoan(loan.Id, amount);
             }
 
             // 4. Verify Failure Flow
@@ -306,15 +305,11 @@ public class LoanWorkflowTests
         var walletDbName = "Wallet_" + Guid.NewGuid();
         var paymentDbName = "Payment_" + Guid.NewGuid();
 
-        using var lendingKeepAlive = CreateAndOpenConnection(lendingDbName);
-        using var walletKeepAlive = CreateAndOpenConnection(walletDbName);
-        using var paymentKeepAlive = CreateAndOpenConnection(paymentDbName);
-
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole());
-        services.AddDbContext<LendingDbContext>(options => options.UseSqlite(lendingKeepAlive.ConnectionString));
-        services.AddDbContext<WalletDbContext>(options => options.UseSqlite(walletKeepAlive.ConnectionString));
-        services.AddDbContext<PaymentDbContext>(options => options.UseSqlite(paymentKeepAlive.ConnectionString));
+        services.AddDbContext<LendingDbContext>(options => options.UseInMemoryDatabase(lendingDbName));
+        services.AddDbContext<WalletDbContext>(options => options.UseInMemoryDatabase(walletDbName));
+        services.AddDbContext<PaymentDbContext>(options => options.UseInMemoryDatabase(paymentDbName));
         
         services.AddScoped<ILendingService, LendingService.Services.LendingService>();
         services.AddScoped<IWalletService, WalletService.Services.WalletService>();
@@ -341,7 +336,7 @@ public class LoanWorkflowTests
             var lendingService = scope.ServiceProvider.GetRequiredService<ILendingService>();
             
             await Assert.ThrowsAsync<ArgumentException>(async () => 
-                await lendingService.CreateLoan("user-invalid", -100, "USD"));
+                await lendingService.CreateLoan("user-invalid", -100, "USD", 12));
         }
         finally
         {
@@ -356,15 +351,11 @@ public class LoanWorkflowTests
         var walletDbName = "Wallet_" + Guid.NewGuid();
         var paymentDbName = "Payment_" + Guid.NewGuid();
 
-        using var lendingKeepAlive = CreateAndOpenConnection(lendingDbName);
-        using var walletKeepAlive = CreateAndOpenConnection(walletDbName);
-        using var paymentKeepAlive = CreateAndOpenConnection(paymentDbName);
-
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole());
-        services.AddDbContext<LendingDbContext>(options => options.UseSqlite(lendingKeepAlive.ConnectionString));
-        services.AddDbContext<WalletDbContext>(options => options.UseSqlite(walletKeepAlive.ConnectionString));
-        services.AddDbContext<PaymentDbContext>(options => options.UseSqlite(paymentKeepAlive.ConnectionString));
+        services.AddDbContext<LendingDbContext>(options => options.UseInMemoryDatabase(lendingDbName));
+        services.AddDbContext<WalletDbContext>(options => options.UseInMemoryDatabase(walletDbName));
+        services.AddDbContext<PaymentDbContext>(options => options.UseInMemoryDatabase(paymentDbName));
         
         services.AddScoped<ILendingService, LendingService.Services.LendingService>();
         services.AddScoped<IWalletService, WalletService.Services.WalletService>();
@@ -399,9 +390,10 @@ public class LoanWorkflowTests
             var userId = "user-concurrent";
             var amount = 1000m;
             var currency = "USD";
+            var termMonths = 12;
 
             // 1. Create and Disburse Loan
-            var loan = await lendingService.CreateLoan(userId, amount, currency);
+            var loan = await lendingService.CreateLoan(userId, amount, currency, termMonths);
             
             // Wait for disbursement
             Assert.True(await harness.Published.Any<LoanApproved>());
@@ -414,14 +406,14 @@ public class LoanWorkflowTests
             {
                 using var tScope = provider.CreateScope();
                 var service = tScope.ServiceProvider.GetRequiredService<ILendingService>();
-                return await service.RepayLoan(loan.Id);
+                return await service.RepayLoan(loan.Id, amount);
             });
 
             var task2 = Task.Run(async () => 
             {
                 using var tScope = provider.CreateScope();
                 var service = tScope.ServiceProvider.GetRequiredService<ILendingService>();
-                return await service.RepayLoan(loan.Id);
+                return await service.RepayLoan(loan.Id, amount);
             });
 
             var results = await Task.WhenAll(task1, task2);
@@ -444,15 +436,11 @@ public class LoanWorkflowTests
         var walletDbName = "Wallet_" + Guid.NewGuid();
         var paymentDbName = "Payment_" + Guid.NewGuid();
 
-        using var lendingKeepAlive = CreateAndOpenConnection(lendingDbName);
-        using var walletKeepAlive = CreateAndOpenConnection(walletDbName);
-        using var paymentKeepAlive = CreateAndOpenConnection(paymentDbName);
-
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole());
-        services.AddDbContext<LendingDbContext>(options => options.UseSqlite(lendingKeepAlive.ConnectionString));
-        services.AddDbContext<WalletDbContext>(options => options.UseSqlite(walletKeepAlive.ConnectionString));
-        services.AddDbContext<PaymentDbContext>(options => options.UseSqlite(paymentKeepAlive.ConnectionString));
+        services.AddDbContext<LendingDbContext>(options => options.UseInMemoryDatabase(lendingDbName));
+        services.AddDbContext<WalletDbContext>(options => options.UseInMemoryDatabase(walletDbName));
+        services.AddDbContext<PaymentDbContext>(options => options.UseInMemoryDatabase(paymentDbName));
         
         services.AddScoped<ILendingService, LendingService.Services.LendingService>();
         services.AddScoped<IWalletService, WalletService.Services.WalletService>();
@@ -497,7 +485,7 @@ public class LoanWorkflowTests
                 {
                     using var scope = provider.CreateScope();
                     var service = scope.ServiceProvider.GetRequiredService<ILendingService>();
-                    return await service.CreateLoan(userId, 100 + index, currency);
+                    return await service.CreateLoan(userId, 100 + index, currency, 12);
                 }));
             }
 
