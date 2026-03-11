@@ -43,7 +43,7 @@ builder.AddEventBus((x) =>
     {
         x.UsingRabbitMq((context, cfg) =>
         {
-            cfg.Host(messagingConnectionString);
+            ConfigureRabbitMqHost(cfg, messagingConnectionString);
             
             cfg.ReceiveEndpoint("loan-approved", e =>
             {
@@ -80,6 +80,8 @@ app.Logger.LogInformation("PaymentService starting in environment: {Environment}
 
 app.UseHttpsRedirection();
 
+app.MapDefaultEndpoints();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseExceptionHandler();
@@ -96,9 +98,38 @@ app.MapGet("/env", () => app.Environment.EnvironmentName);
 app.MapGet("/routes", (IEnumerable<EndpointDataSource> endpointSources) =>
     string.Join("\n", endpointSources.SelectMany(source => source.Endpoints)));
 
-app.MapDefaultEndpoints();
-
 // Ensure database is created
 await app.SafeMigrateAsync<PaymentDbContext>();
 
 app.Run();
+
+static void ConfigureRabbitMqHost(IRabbitMqBusFactoryConfigurator cfg, string connectionString)
+{
+    if (Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+    {
+        var vhost = uri.AbsolutePath.Trim('/');
+        var host = uri.Host;
+        var port = (ushort)(uri.IsDefaultPort ? 5672 : uri.Port);
+
+        cfg.Host(host, port, string.IsNullOrWhiteSpace(vhost) ? "/" : vhost, h =>
+        {
+            if (!string.IsNullOrWhiteSpace(uri.UserInfo))
+            {
+                var parts = uri.UserInfo.Split(':', 2);
+                if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
+                {
+                    h.Username(Uri.UnescapeDataString(parts[0]));
+                }
+
+                if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]))
+                {
+                    h.Password(Uri.UnescapeDataString(parts[1]));
+                }
+            }
+        });
+
+        return;
+    }
+
+    cfg.Host(connectionString);
+}

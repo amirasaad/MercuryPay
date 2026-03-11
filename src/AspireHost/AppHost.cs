@@ -1,7 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgresBuilder = builder.AddPostgres("postgres");
-var ephemeral = Environment.GetEnvironmentVariable("ASPIRE_EPHEMERAL_POSTGRES") == "true";
+var ephemeral = !string.Equals(Environment.GetEnvironmentVariable("ASPIRE_EPHEMERAL_POSTGRES"), "false", StringComparison.OrdinalIgnoreCase);
 var volumeName = ephemeral ? $"mercurypay-postgres-data-{Guid.NewGuid():N}" : "mercurypay-postgres-data";
 var postgres = postgresBuilder
     .WithDataVolume(volumeName)

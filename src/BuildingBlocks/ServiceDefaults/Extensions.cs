@@ -101,7 +101,7 @@ public static class Extensions
     {
         builder.Services.AddMassTransit(x =>
         {
-            x.SetKebabCaseEndpointNameFormatter();
+            x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(includeNamespace: true));
             
             configure?.Invoke(x);
 
