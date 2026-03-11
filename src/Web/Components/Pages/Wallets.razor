@@ -22,13 +22,16 @@
     }
     else
     {
+        <div class="mb-3">
+            <button class="btn btn-primary" @onclick="CreateWallet">Create USD Wallet</button>
+        </div>
         <div class="row">
             @foreach (var wallet in wallets)
             {
                 <div class="col-md-4 mb-3">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">@wallet.Currency Wallet</h5>
+                            <h5 class="card-title" data-testid="wallet-card-@wallet.Currency">@wallet.Currency Wallet</h5>
                             <h6 class="card-subtitle mb-2 text-muted">@wallet.Id</h6>
                             <p class="card-text display-4">@wallet.Balance.ToString("C")</p>
                             <a href="#" class="card-link">View Transactions</a>
