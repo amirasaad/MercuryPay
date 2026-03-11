@@ -5,7 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- E2E tests require Docker and should be excluded from CI -->
+    <ExcludeE2ETests>true</ExcludeE2ETests>
   </PropertyGroup>
+
+  <!-- Exclude from default build when ExcludeE2ETests is true -->
+  <ItemGroup Condition="'$(ExcludeE2ETests)' == 'true'">
+    <Compile Remove="**/*.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Testing" Version="13.1.2" />

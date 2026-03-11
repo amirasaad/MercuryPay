@@ -30,6 +30,7 @@ public class LoanWorkflowTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task LoanWorkflow_FullCycle_ShouldSucceed()
     {
         // 1. Wait for services

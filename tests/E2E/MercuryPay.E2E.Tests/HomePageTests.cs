@@ -57,6 +57,7 @@ public class HomePageTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task HomePage_ShouldLoad_AndShowWelcomeMessage()
     {
         // Get the URL for the webfrontend

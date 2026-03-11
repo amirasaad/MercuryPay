@@ -55,6 +55,7 @@ public partial class LoginTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task Login_WithValidCredentials_ShouldRedirectToHomeAndShowUserName()
     {
         // 1. Get Web Frontend URL

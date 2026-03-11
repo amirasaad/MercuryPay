@@ -30,6 +30,7 @@ public class PartialRepaymentTests(ITestOutputHelper output) : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task PartialRepayment_ShouldUpdateInstallmentStatus()
     {
         // 1. Wait for services
@@ -213,7 +214,9 @@ public class PartialRepaymentTests(ITestOutputHelper output) : IAsyncLifetime
             var loan = await GetLoanDetailsAsync(client, loanId);
             if (loan?.RepaymentSchedule != null)
             {
-                var installment = loan.RepaymentSchedule.Installments.FirstOrDefault(i => i.DueDate == dueDate);
+                // Match by due date with tolerance for serialization precision differences
+                var installment = loan.RepaymentSchedule.Installments
+                    .FirstOrDefault(i => Math.Abs((i.DueDate - dueDate).TotalSeconds) < 1);
                 if (installment != null)
                 {
                     if (installment.Status == expectedStatus && Math.Abs(installment.PaidAmount - expectedPaidAmount) < 0.01m)

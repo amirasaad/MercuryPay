@@ -56,6 +56,7 @@ public partial class RiskFlowTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task HighValuePayment_ShouldBeRejected_ByRiskService()
     {
         // 1. Wait for Services
@@ -90,6 +91,7 @@ public partial class RiskFlowTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task LowValuePayment_ShouldBeApproved_ByRiskService()
     {
         // 1. Wait for Services

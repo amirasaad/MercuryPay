@@ -52,6 +52,7 @@ public partial class WalletTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "E2E")]
     public async Task CreateWallet_ShouldAddWalletToList()
     {
         // 1. Wait for services
