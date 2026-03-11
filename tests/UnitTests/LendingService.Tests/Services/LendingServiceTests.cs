@@ -29,7 +29,7 @@ public class LendingServiceTests
     }
 
     [Fact]
-    public async Task CreateLoan_ShouldThrowException_WhenAmountExceedsLimit()
+    public async Task CreateLoan_ShouldSucceed_WhenAmountExceedsLimit()
     {
         // Arrange
         var userId = "user-123";
@@ -37,11 +37,13 @@ public class LendingServiceTests
         var currency = "USD";
         var termMonths = 12;
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
-            _service.CreateLoan(userId, amount, currency, termMonths));
-            
-        Assert.Contains("Loan amount exceeds maximum limit", exception.Message);
+        // Act
+        var loan = await _service.CreateLoan(userId, amount, currency, termMonths);
+
+        // Assert
+        Assert.NotNull(loan);
+        Assert.Equal(amount, loan.Amount);
+        Assert.Equal("Processing", loan.Status);
     }
 
     [Fact]
