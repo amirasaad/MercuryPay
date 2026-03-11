@@ -162,7 +162,12 @@ graph TB
     Users --> AFD
     AFD --> WAF
     WAF --> GW
-    GW --> PG & WG & LG & RG & AG & IG
+    GW --> PG
+    GW --> WG
+    GW --> LG
+    GW --> RG
+    GW --> AG
+    GW --> IG
     
     PG --> PDB
     WG --> WDB
@@ -183,7 +188,9 @@ graph TB
     PG --> Banks
     RG --> Credit
     
-    AH --> PG & WG & LG
+    AH --> PG
+    AH --> WG
+    AH --> LG
     OT --> Monitor
     
     KV --> PG
@@ -199,37 +206,46 @@ graph TB
 flowchart TB
     subgraph "Payment Context"
         direction TB
+        PAY_CTX[Payment Context]
         P1[Payment Aggregate] --> PE1[PaymentInitiated]
         P1 --> PE2[PaymentAuthorized]
         P1 --> PE3[PaymentCaptured]
         P1 --> PE4[PaymentRefunded]
+        PAY_CTX --> P1
     end
     
     subgraph "Wallet Context"
         direction TB
+        WAL_CTX[Wallet Context]
         W1[Wallet Aggregate] --> WE1[WalletCredited]
         W1 --> WE2[WalletDebited]
         W1 --> WE3[HoldPlaced]
         W1 --> WE4[HoldReleased]
+        WAL_CTX --> W1
     end
     
     subgraph "Lending Context"
         direction TB
+        LEN_CTX[Lending Context]
         L1[Loan Aggregate] --> LE1[LoanApplicationSubmitted]
         L1 --> LE2[LoanApproved]
         L1 --> LE3[LoanDisbursed]
         L1 --> LE4[RepaymentReceived]
+        LEN_CTX --> L1
     end
     
     subgraph "Risk Context"
         direction TB
+        RISK_CTX[Risk Context]
         R1[RiskAssessment] --> RE1[PaymentRiskAssessed]
         R1 --> RE2[LoanRiskAssessed]
         R1 --> RE3[FraudDetected]
+        RISK_CTX --> R1
     end
     
     subgraph "Agent Context"
         direction TB
+        AGENT_CTX[Agent Context]
         A1[FraudAgent]
         A2[RetryAgent]
         A3[ReconciliationAgent]
@@ -240,18 +256,18 @@ flowchart TB
         EB[(Kafka/Redis Streams)]
     end
     
-    Payment Context --> EB
-    Wallet Context --> EB
-    Lending Context --> EB
-    Risk Context --> EB
+    PAY_CTX --> EB
+    WAL_CTX --> EB
+    LEN_CTX --> EB
+    RISK_CTX --> EB
     
-    EB --> Payment Context
-    EB --> Wallet Context
-    EB --> Lending Context
-    EB --> Risk Context
-    EB --> Agent Context
+    EB --> PAY_CTX
+    EB --> WAL_CTX
+    EB --> LEN_CTX
+    EB --> RISK_CTX
+    EB --> AGENT_CTX
     
-    Agent Context --> EB
+    AGENT_CTX --> EB
 ```
 
 ---
