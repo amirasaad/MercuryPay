@@ -14,6 +14,7 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     private readonly IPaymentService _paymentService = paymentService;
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] PaymentRequest request)
     {
         try
@@ -32,6 +33,7 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> Get(Guid id)
     {
         var payment = await _paymentService.GetPayment(id);

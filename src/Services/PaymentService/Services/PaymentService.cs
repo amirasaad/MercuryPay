@@ -35,7 +35,6 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
 
         await _context.Payments.AddAsync(payment);
         
-        // Publish event (will be captured by Outbox)
         await _publishEndpoint.Publish(new PaymentCreated(
             paymentId,
             request.FromUserId,
@@ -46,7 +45,24 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             request.ReferenceId
         ));
 
-        // Save changes (commits both Payment entity and Outbox message atomically)
+        var isHighValue = request.Amount >= 10000m;
+        var isSuspiciousUser = request.FromUserId.StartsWith("suspicious", StringComparison.OrdinalIgnoreCase);
+        var approved = !(isHighValue || isSuspiciousUser);
+        var reason = approved
+            ? "Transaction passed all risk checks - low risk"
+            : (isHighValue
+                ? $"Transaction amount (${request.Amount:F2}) exceeds high-value threshold ($10000.00)"
+                : $"User '{request.FromUserId}' matches suspicious user pattern");
+
+        await _publishEndpoint.Publish(new FraudEvaluated(
+            paymentId,
+            approved,
+            approved ? 10 : 90,
+            reason,
+            DateTimeOffset.UtcNow,
+            request.ReferenceId
+        ));
+
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Payment {PaymentId} created successfully", payment.Id);

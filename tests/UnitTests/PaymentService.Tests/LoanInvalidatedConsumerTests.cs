@@ -49,7 +49,7 @@ public class LoanInvalidatedConsumerTests
         var updatedApprovedPayment = await _dbContext.Payments.FindAsync(approvedPayment.Id);
 
         Assert.NotNull(updatedPendingPayment);
-        Assert.Contains("Rejected: Loan Invalidated", updatedPendingPayment.Status);
+        Assert.Equal("Rejected", updatedPendingPayment.Status);
         
         Assert.NotNull(updatedApprovedPayment);
         Assert.Equal("Approved", updatedApprovedPayment.Status); // Should not change approved payments

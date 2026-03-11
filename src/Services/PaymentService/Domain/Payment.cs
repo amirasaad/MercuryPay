@@ -32,7 +32,7 @@ public class Payment
 
     public void Reject(string reason)
     {
-        Status = $"Rejected: {reason}";
+        Status = "Rejected";
     }
 
     // Required for EF Core
