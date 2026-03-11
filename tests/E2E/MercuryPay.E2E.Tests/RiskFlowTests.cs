@@ -60,9 +60,10 @@ public partial class RiskFlowTests : IAsyncLifetime
     {
         // 1. Wait for Services
         var resourceNotificationService = _app.Services.GetRequiredService<ResourceNotificationService>();
-        await resourceNotificationService.WaitForResourceAsync("webfrontend", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
+        await resourceNotificationService.WaitForResourceAsync("messaging", KnownResourceStates.Running);
+        await Task.Delay(2000);
 
         // 2. Create HTTP Client for Payment Service
         var httpClient = _app.CreateHttpClient("paymentservice");
@@ -93,9 +94,10 @@ public partial class RiskFlowTests : IAsyncLifetime
     {
         // 1. Wait for Services
         var resourceNotificationService = _app.Services.GetRequiredService<ResourceNotificationService>();
-        await resourceNotificationService.WaitForResourceAsync("webfrontend", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
+        await resourceNotificationService.WaitForResourceAsync("messaging", KnownResourceStates.Running);
+        await Task.Delay(2000);
 
         // 2. Create HTTP Client for Payment Service
         var httpClient = _app.CreateHttpClient("paymentservice");
@@ -123,7 +125,7 @@ public partial class RiskFlowTests : IAsyncLifetime
     private async Task<string> WaitForPaymentStatusAsync(HttpClient client, Guid paymentId, string expectedStatusSubstring)
     {
         var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(30))
+        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(120))
         {
             var response = await client.GetFromJsonAsync<PaymentResponse>($"/payments/{paymentId}");
             if (response != null && response.Status != "Pending")

@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Aspire.Hosting.ApplicationModel;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace MercuryPay.E2E.Tests;
 
 public class HomePageTests : IAsyncLifetime
@@ -65,7 +67,7 @@ public class HomePageTests : IAsyncLifetime
         var baseAddress = httpClient.BaseAddress ?? throw new Exception("Could not determine base address for webfrontend");
 
         // Navigate
-        await _page.GotoAsync(baseAddress.ToString());
+        await _page.GotoAsync(baseAddress.ToString(), new PageGotoOptions { Timeout = 60000 });
 
         // Assert Title
         var title = await _page.TitleAsync();

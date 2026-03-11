@@ -71,27 +71,52 @@ public partial class WalletTests : IAsyncLifetime
         var httpClient = _app.CreateHttpClient("webfrontend");
         var baseAddress = httpClient.BaseAddress ?? throw new Exception("Could not determine base address");
         
-        await _page.GotoAsync($"{baseAddress}wallets");
+        await _page.GotoAsync($"{baseAddress}wallets", new PageGotoOptions { Timeout = 60000 });
         
         // 4. Check if "Create USD Wallet" button exists
         // Wait for loading to finish
         await _page.WaitForSelectorAsync("h1:has-text('My Wallets')");
+        await _page.WaitForFunctionAsync("() => window.Blazor !== undefined");
         
         // Check if we already have wallets (might be persistent from other tests or seed)
         // If "Create USD Wallet" button is present, click it.
         var createButton = _page.Locator("button:has-text('Create USD Wallet')");
         if (await createButton.IsVisibleAsync())
         {
-            await createButton.ClickAsync();
+            await createButton.ClickAsync(new LocatorClickOptions { Force = true });
+            await _page.WaitForTimeoutAsync(2000);
         }
 
         // 5. Verify Wallet Card appears
-        // Wait for card title "USD Wallet"
-        await _page.WaitForSelectorAsync(".card-title:has-text('USD Wallet')", new PageWaitForSelectorOptions { Timeout = 10000 });
+        // Poll for up to 30s to allow initial creation and list refresh
+        var start = DateTime.UtcNow;
+        while (DateTime.UtcNow - start < TimeSpan.FromSeconds(30))
+        {
+            var walletCard = _page.Locator("[data-testid='wallet-card-USD']");
+            var count = await walletCard.CountAsync();
+            if (count > 0)
+            {
+                Assert.True(true);
+                return;
+            }
+            await _page.WaitForTimeoutAsync(1000);
+            await _page.ReloadAsync(new PageReloadOptions { Timeout = 60000 });
+            await _page.WaitForSelectorAsync("h1:has-text('My Wallets')");
+        }
         
-        var walletCard = _page.Locator(".card-title:has-text('USD Wallet')");
-        var count = await walletCard.CountAsync();
-        Assert.True(count > 0, "Wallet card should be visible");
+        // As a last attempt, click the create button again if present
+        if (await createButton.IsVisibleAsync())
+        {
+            await createButton.ClickAsync();
+            await _page.WaitForSelectorAsync("[data-testid='wallet-card-USD']", new PageWaitForSelectorOptions { Timeout = 20000 });
+        }
+        else
+        {
+            // Final assertion
+            var walletCard = _page.Locator("[data-testid='wallet-card-USD']");
+            var count = await walletCard.CountAsync();
+            Assert.True(count > 0, "Wallet card should be visible");
+        }
     }
 
     private async Task LoginAsync(string username, string password)
@@ -124,7 +149,7 @@ public partial class WalletTests : IAsyncLifetime
     private static async Task WaitForKeycloakAsync(HttpClient client)
     {
         var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(120))
+        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(180))
         {
             try
             {

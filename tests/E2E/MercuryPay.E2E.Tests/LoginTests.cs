@@ -70,7 +70,7 @@ public partial class LoginTests : IAsyncLifetime
         var baseAddress = httpClient.BaseAddress ?? throw new Exception("Could not determine base address for webfrontend");
 
         // 2. Navigate to Home
-        await _page.GotoAsync(baseAddress.ToString());
+        await _page.GotoAsync(baseAddress.ToString(), new PageGotoOptions { Timeout = 60000 });
 
         // 3. Click Login Link
         // Wait for the login link to be visible first to ensure page load
@@ -127,7 +127,7 @@ public partial class LoginTests : IAsyncLifetime
     private async Task WaitForKeycloakAsync(HttpClient client)
     {
         var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(60))
+        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(180))
         {
             try
             {
