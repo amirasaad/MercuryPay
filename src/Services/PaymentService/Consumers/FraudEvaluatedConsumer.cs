@@ -24,6 +24,13 @@ public class FraudEvaluatedConsumer(ILogger<FraudEvaluatedConsumer> logger, Paym
             return;
         }
 
+        // Only update status if payment is still pending; do not override terminal states
+        if (payment.Status != "Pending")
+        {
+            _logger.LogInformation("Skipping fraud status update for Payment {PaymentId} with current Status {Status}", payment.Id, payment.Status);
+            return;
+        }
+
         if (message.IsApproved)
         {
             payment.Approve();
