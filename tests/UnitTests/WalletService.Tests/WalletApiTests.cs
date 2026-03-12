@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using System.Text.Encodings.Web;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MercuryPay.WalletService.Tests;
 
@@ -20,6 +21,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
 {
     private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
             // Override configuration to use InMemory DB logic in Program.cs
             builder.UseSetting("ConnectionStrings:walletdb", "");
 
@@ -83,20 +85,9 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var wallet = await getResponse.Content.ReadFromJsonAsync<WalletResponse>();
         Assert.NotNull(wallet);
         Assert.Equal(createdWallet.Id, wallet.Id);
-        // Note: The controller returns wallets for the authenticated user ("user_123")
-        // But here we created a wallet for "user_456".
-        // The controller Create method: 
-        // var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        // var wallet = _walletService.CreateWallet(userId ?? request.UserId, request.Currency);
-        // If User is present ("user_123"), it overrides request.UserId!
-        // So the wallet created will belong to "user_123".
-        // And GetWallets returns wallets for "user_123".
-        // But Get(id) just gets by ID.
-        
-        // Wait, let's check controller logic again.
-        // Create: var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        // So created wallet will be for "user_123".
-        Assert.Equal("user_123", wallet.UserId);
+        // Create action uses request.UserId unless it is empty; token is used only when request.UserId is empty.
+        // Since we passed UserId = \"user_456\", the created wallet should belong to \"user_456\".
+        Assert.Equal("user_456", wallet.UserId);
     }
 
     [Fact]

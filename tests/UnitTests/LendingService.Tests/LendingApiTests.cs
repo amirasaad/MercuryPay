@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using MassTransit;
 using MassTransit.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -36,6 +37,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
 {
     private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
             builder.ConfigureTestServices(services =>
             {
                 // Remove existing DbContext options
@@ -83,8 +85,18 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
         var loanId = loan!.Id;
 
-        // Wait for Loan to be Approved (consumed by LoanCreatedConsumer)
-        Assert.True(await harness.Consumed.Any<LoanCreated>(), "LoanCreated event was not consumed");
+        // Wait for Loan to be Approved (consumed by LoanCreatedConsumer) with retry
+        var consumed = false;
+        for (int i = 0; i < 30; i++)
+        {
+            if (await harness.Consumed.Any<LoanCreated>())
+            {
+                consumed = true;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.True(consumed, "LoanCreated event was not consumed");
 
         // Verify status is Approved via API with retry
         LoanResponse? approvedLoan = null;
@@ -109,8 +121,18 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var repayResponse = await client.PostAsJsonAsync($"/loans/{loanId}/repay", new { Amount = partialAmount });
         Assert.Equal(HttpStatusCode.Accepted, repayResponse.StatusCode);
 
-        // Verify LoanRepaymentRequested is published
-        Assert.True(await harness.Published.Any<LoanRepaymentRequested>(), "LoanRepaymentRequested event was not published");
+        // Verify LoanRepaymentRequested is published with retry
+        var published = false;
+        for (int i = 0; i < 30; i++)
+        {
+            if (await harness.Published.Any<LoanRepaymentRequested>())
+            {
+                published = true;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.True(published, "LoanRepaymentRequested event was not published");
 
         // Simulate LoanRepaymentProcessed (Success) from external service
         await harness.Bus.Publish(new LoanRepaymentProcessed(
@@ -122,8 +144,18 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
             DateTime.UtcNow
         ));
 
-        // Wait for LoanRepaymentProcessedConsumer to consume the event
-        Assert.True(await harness.Consumed.Any<LoanRepaymentProcessed>(), "LoanRepaymentProcessed event was not consumed");
+        // Wait for LoanRepaymentProcessed to be consumed with retry
+        var repaymentConsumed = false;
+        for (int i = 0; i < 30; i++)
+        {
+            if (await harness.Consumed.Any<LoanRepaymentProcessed>())
+            {
+                repaymentConsumed = true;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.True(repaymentConsumed, "LoanRepaymentProcessed event was not consumed");
 
         // Verify Installment Status via API
         LoanResponse? updatedLoan = null;

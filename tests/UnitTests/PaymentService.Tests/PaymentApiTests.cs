@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MercuryPay.PaymentService.Tests;
 
@@ -27,6 +28,7 @@ public class PaymentApiTests : IClassFixture<WebApplicationFactory<Program>>
         
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
             builder.UseSetting("ConnectionStrings:paymentdb", "");
 
             builder.ConfigureServices(services =>
