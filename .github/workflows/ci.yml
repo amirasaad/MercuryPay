@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore
-        run: dotnet restore MercuryPay.slnx --locked-mode
+        run: dotnet restore MercuryPay.slnx
 
       - name: Build
         run: dotnet build MercuryPay.slnx -c Release --no-restore
@@ -60,7 +60,7 @@ jobs:
           cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore
-        run: dotnet restore MercuryPay.slnx --locked-mode
+        run: dotnet restore MercuryPay.slnx
 
       - name: Build
         run: dotnet build MercuryPay.slnx -c Release --no-restore
