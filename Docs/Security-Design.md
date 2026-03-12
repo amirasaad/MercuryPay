@@ -55,7 +55,10 @@ flowchart TD
   - `GET /me`: Accessible by authenticated users (Role: `user`).
   - `POST /loans`: Accessible by authenticated users (Role: `user`).
   - `POST /payments`: Accessible by authenticated users (Role: `user`).
-  - `GET /wallets`: Accessible by authenticated users (Role: `user`).
+  - `GET /wallets`: Accessible by authenticated users (Role: `user`). Returns only the authenticated user's wallets; querying another user's wallets returns `403 Forbidden`.
+  - `GET /wallets/{id}`: Accessible by authenticated users (Role: `user`). Returns `403 Forbidden` if the wallet does not belong to the authenticated user.
+  - `POST /wallets`: Accessible by authenticated users (Role: `user`).
+  - `POST /wallets/{id}/credit`: Accessible by authenticated users; intended for internal/admin callers. Requires a stable `transactionId` for auditability.
   - `ADMIN /*`: Accessible only by `admin` role.
 
 ### 4.3 User Context
