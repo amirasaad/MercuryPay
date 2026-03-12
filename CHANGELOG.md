@@ -6,6 +6,58 @@
 <a name="1.4.0"></a>
 <a name="1.5.0"></a>
 <a name="1.6.0"></a>
+<a name="1.7.0"></a>
+# [1.7.0](https://github.com/amirasaad/MercuryPay/compare/v1.6.0...v1.7.0) (2026-03-12)
+
+
+### ♻️ Code Refactoring
+
+* **controllers:** minor cleanup in Payments and Wallets controllers ([d595e6c](https://github.com/amirasaad/MercuryPay/commit/d595e6c))
+
+
+### ✅ Tests
+
+* **e2e:** stabilize wallet, risk, and loan flows ([0bf1916](https://github.com/amirasaad/MercuryPay/commit/0bf1916))
+* **integration:** cover loan invalidation payment cancellation ([4851d87](https://github.com/amirasaad/MercuryPay/commit/4851d87))
+* **integration:** use http and accept self-signed; switch to event-driven invalidation ([ac4ab7b](https://github.com/amirasaad/MercuryPay/commit/ac4ab7b))
+* **unit:** set Testing env for WebApplicationFactory; fix WalletApiTests user assertion ([382a908](https://github.com/amirasaad/MercuryPay/commit/382a908))
+* **wallet:** fix unit tests and add ReferenceId to logs ([219f002](https://github.com/amirasaad/MercuryPay/commit/219f002))
+* **workflow:** fix loan workflow unit test ([8044e2a](https://github.com/amirasaad/MercuryPay/commit/8044e2a))
+
+
+### ✨ Features
+
+* **lending:** add data cleanup service for invalid loan amounts ([38a0cd0](https://github.com/amirasaad/MercuryPay/commit/38a0cd0))
+* **lending:** enforce max loan amount limit & add repayment tests ([db5342a](https://github.com/amirasaad/MercuryPay/commit/db5342a))
+* **lending:** publish LoanInvalidated event from cleanup service ([81c4b6b](https://github.com/amirasaad/MercuryPay/commit/81c4b6b))
+* **payment:** consume LoanInvalidated event and fix tests ([2cf5d17](https://github.com/amirasaad/MercuryPay/commit/2cf5d17))
+
+
+### 🐛 Bug Fixes
+
+* **config:** guard MassTransit AddEventBus in Testing env to avoid double bus factory set ([2c36325](https://github.com/amirasaad/MercuryPay/commit/2c36325))
+* **lending:** gate repayments and enable loan cleanup ([e91da2b](https://github.com/amirasaad/MercuryPay/commit/e91da2b))
+* **payment:** prevent status race; only Pending in FraudEvaluated and reject Pending on LoanInvalidated ([7120ae6](https://github.com/amirasaad/MercuryPay/commit/7120ae6))
+* **payment:** publish fraud events and normalize rejection ([06e0c27](https://github.com/amirasaad/MercuryPay/commit/06e0c27))
+* **wallet:** auto-provision wallets and add stable selectors ([29d810b](https://github.com/amirasaad/MercuryPay/commit/29d810b))
+
+
+### 💚 Continuous Integration
+
+* add GitHub Actions workflow for CI ([6d79ccf](https://github.com/amirasaad/MercuryPay/commit/6d79ccf))
+
+
+### 📝 Documentation
+
+* **architecture:** add system diagrams ([12c9204](https://github.com/amirasaad/MercuryPay/commit/12c9204))
+* **architecture:** fix diagrams 3 and 4 ([e1079ca](https://github.com/amirasaad/MercuryPay/commit/e1079ca))
+
+
+### 🔨 Chores
+
+* **build:** update solution and test project references ([7ec62c0](https://github.com/amirasaad/MercuryPay/commit/7ec62c0))
+* simplify commitlint config and update dependencies ([9bc92af](https://github.com/amirasaad/MercuryPay/commit/9bc92af))
+
 # [1.6.0](https://github.com/user/MercuryPay/compare/v1.5.0...v1.6.0) (2026-03-09)
 
 
