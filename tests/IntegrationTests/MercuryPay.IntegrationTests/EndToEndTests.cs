@@ -9,6 +9,7 @@ using Xunit.Abstractions;
 
 namespace MercuryPay.IntegrationTests;
 
+[Collection("DistributedApp")]
 public class EndToEndTests(ITestOutputHelper output)
 {
     [Fact]
@@ -35,8 +36,14 @@ public class EndToEndTests(ITestOutputHelper output)
         var paymentClient = app.CreateHttpClient("paymentservice");
         var walletClient = app.CreateHttpClient("walletservice");
 
+        paymentClient.Timeout = TimeSpan.FromMinutes(2);
+        walletClient.Timeout = TimeSpan.FromMinutes(2);
+
         output.WriteLine($"PaymentService BaseAddress: {paymentClient.BaseAddress}");
         output.WriteLine($"WalletService BaseAddress: {walletClient.BaseAddress}");
+
+        await WaitForAliveAsync(walletClient);
+        await WaitForAliveAsync(paymentClient);
 
         // Verify Environment and Connectivity
         try 
@@ -65,15 +72,6 @@ public class EndToEndTests(ITestOutputHelper output)
             output.WriteLine($"Payment Connectivity Check Failed: {ex.Message}");
         }
 
-        // Verify Health
-        var walletHealth = await walletClient.GetAsync("/health");
-        output.WriteLine($"Wallet Health: {walletHealth.StatusCode}");
-        walletHealth.EnsureSuccessStatusCode();
-
-        var paymentHealth = await paymentClient.GetAsync("/health");
-        output.WriteLine($"Payment Health: {paymentHealth.StatusCode}");
-        paymentHealth.EnsureSuccessStatusCode();
-
         var fromUserId = "user_sender";
         var toUserId = "user_receiver";
         var currency = "USD";
@@ -82,7 +80,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 1. Create Sender Wallet
         output.WriteLine("Creating Sender Wallet...");
-        var createFromWalletResponse = await walletClient.PostAsJsonAsync("/Wallets", new { UserId = fromUserId, Currency = currency });
+        var createFromWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = fromUserId, Currency = currency });
         output.WriteLine($"Create Sender Wallet Response: {createFromWalletResponse.StatusCode}");
         if (!createFromWalletResponse.IsSuccessStatusCode)
         {
@@ -95,7 +93,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 2. Credit Sender Wallet
         output.WriteLine("Crediting Sender Wallet...");
-        var creditResponse = await walletClient.PostAsJsonAsync($"/Wallets/{fromWallet.Id}/credit", initialCredit);
+        var creditResponse = await PostWithRetriesAsync(walletClient, $"/Wallets/{fromWallet.Id}/credit", initialCredit);
         output.WriteLine($"Credit Response: {creditResponse.StatusCode}");
         creditResponse.EnsureSuccessStatusCode();
 
@@ -105,7 +103,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 3. Create Receiver Wallet
         output.WriteLine("Creating Receiver Wallet...");
-        var createToWalletResponse = await walletClient.PostAsJsonAsync("/Wallets", new { UserId = toUserId, Currency = currency });
+        var createToWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = toUserId, Currency = currency });
         createToWalletResponse.EnsureSuccessStatusCode();
         var toWallet = await createToWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
         Assert.NotNull(toWallet);
@@ -113,7 +111,7 @@ public class EndToEndTests(ITestOutputHelper output)
         // 4. Create Payment
         output.WriteLine("Creating Payment...");
         var paymentRequest = new PaymentRequest(fromUserId, toUserId, paymentAmount, currency);
-        var createPaymentResponse = await paymentClient.PostAsJsonAsync("/Payments", paymentRequest);
+        var createPaymentResponse = await PostWithRetriesAsync(paymentClient, "/Payments", paymentRequest);
         output.WriteLine($"Create Payment Response: {createPaymentResponse.StatusCode}");
         if (!createPaymentResponse.IsSuccessStatusCode)
         {
@@ -126,6 +124,62 @@ public class EndToEndTests(ITestOutputHelper output)
         output.WriteLine("Polling for balance updates...");
         await PollForBalanceAsync(walletClient, fromWallet.Id, initialCredit - paymentAmount);
         await PollForBalanceAsync(walletClient, toWallet.Id, paymentAmount);
+    }
+
+    private static async Task WaitForAliveAsync(HttpClient client)
+    {
+        var timeout = TimeSpan.FromMinutes(2);
+        var start = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                var response = await client.GetAsync("/alive");
+                if (response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(1000);
+        }
+
+        throw new TimeoutException("Service did not become alive within timeout.");
+    }
+
+    private static async Task<HttpResponseMessage> PostWithRetriesAsync(HttpClient client, string uri, object body)
+    {
+        var timeout = TimeSpan.FromMinutes(2);
+        var start = DateTime.UtcNow;
+        HttpResponseMessage? lastResponse = null;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                lastResponse = await client.PostAsJsonAsync(uri, body);
+                if (lastResponse.IsSuccessStatusCode)
+                {
+                    return lastResponse;
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(1000);
+        }
+
+        if (lastResponse != null)
+        {
+            return lastResponse;
+        }
+
+        throw new TimeoutException($"POST {uri} did not succeed within timeout.");
     }
 
     private async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)

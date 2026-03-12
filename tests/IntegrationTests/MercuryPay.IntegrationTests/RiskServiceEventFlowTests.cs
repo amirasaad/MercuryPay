@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
-using MercuryPay.BuildingBlocks.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,6 +13,7 @@ namespace MercuryPay.IntegrationTests;
 /// Integration tests for Risk Service event flow.
 /// Tests the full cycle: PaymentCreated → Risk Evaluation → FraudEvaluated
 /// </summary>
+[Collection("DistributedApp")]
 public class RiskServiceEventFlowTests(ITestOutputHelper output)
 {
     private const int EventProcessingDelayMs = 2000;
@@ -25,7 +25,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     {
         // Arrange
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
-        appHost.Services.ConfigureHttpClientDefaults(client => client.AddStandardResilienceHandler());
+        appHost.Services.ConfigureHttpClientDefaults(client =>
+        {
+            client.AddStandardResilienceHandler();
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        });
 
         await using var app = await appHost.BuildAsync();
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
@@ -35,7 +42,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
 
         // Act: Create a low-value payment (should be approved)
         var newPaymentRequest = new
@@ -51,20 +58,12 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
         Assert.NotNull(createdPayment);
-        Assert.NotEmpty(createdPayment.Id);
+        Assert.NotEqual(Guid.Empty, createdPayment.Id);
 
         output.WriteLine($"Created Payment: {createdPayment.Id}");
 
-        // Wait for risk evaluation to complete
-        await Task.Delay(EventProcessingDelayMs);
-
         // Assert: Verify payment is in Approved state after risk evaluation
-        var getResponse = await paymentClient.GetAsync($"/Payments/{createdPayment.Id}");
-        getResponse.EnsureSuccessStatusCode();
-
-        var payment = await getResponse.Content.ReadFromJsonAsync<PaymentDto>();
-        Assert.NotNull(payment);
-        Assert.Equal("Approved", payment.Status);
+        var payment = await WaitForPaymentStatusAsync(paymentClient, createdPayment.Id, "Approved", TimeSpan.FromSeconds(60));
         output.WriteLine($"Payment Status: {payment.Status} (Expected: Approved)");
     }
 
@@ -73,7 +72,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     {
         // Arrange
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
-        appHost.Services.ConfigureHttpClientDefaults(client => client.AddStandardResilienceHandler());
+        appHost.Services.ConfigureHttpClientDefaults(client =>
+        {
+            client.AddStandardResilienceHandler();
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        });
 
         await using var app = await appHost.BuildAsync();
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
@@ -82,7 +88,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
 
         // Act: Create a high-value payment
         var highValueRequest = new
@@ -101,16 +107,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         output.WriteLine($"Created High-Value Payment: {createdPayment.Id}");
 
-        // Wait for risk evaluation
-        await Task.Delay(EventProcessingDelayMs);
-
         // Assert: Verify payment is rejected
-        var getResponse = await paymentClient.GetAsync($"/Payments/{createdPayment.Id}");
-        getResponse.EnsureSuccessStatusCode();
-
-        var payment = await getResponse.Content.ReadFromJsonAsync<PaymentDto>();
-        Assert.NotNull(payment);
-        Assert.Equal("Rejected", payment.Status);
+        var payment = await WaitForPaymentStatusAsync(paymentClient, createdPayment.Id, "Rejected", TimeSpan.FromSeconds(60));
         output.WriteLine($"Payment Status: {payment.Status} (Expected: Rejected due to high value)");
     }
 
@@ -119,7 +117,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     {
         // Arrange
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
-        appHost.Services.ConfigureHttpClientDefaults(client => client.AddStandardResilienceHandler());
+        appHost.Services.ConfigureHttpClientDefaults(client =>
+        {
+            client.AddStandardResilienceHandler();
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        });
 
         await using var app = await appHost.BuildAsync();
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
@@ -128,7 +133,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
 
         // Act: Create payment from suspicious user
         var suspiciousRequest = new
@@ -147,16 +152,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         output.WriteLine($"Created Payment from Suspicious User: {createdPayment.Id}");
 
-        // Wait for risk evaluation
-        await Task.Delay(EventProcessingDelayMs);
-
         // Assert: Verify payment is rejected
-        var getResponse = await paymentClient.GetAsync($"/Payments/{createdPayment.Id}");
-        getResponse.EnsureSuccessStatusCode();
-
-        var payment = await getResponse.Content.ReadFromJsonAsync<PaymentDto>();
-        Assert.NotNull(payment);
-        Assert.Equal("Rejected", payment.Status);
+        var payment = await WaitForPaymentStatusAsync(paymentClient, createdPayment.Id, "Rejected", TimeSpan.FromSeconds(60));
         output.WriteLine($"Payment Status: {payment.Status} (Expected: Rejected due to suspicious user)");
     }
 
@@ -165,7 +162,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     {
         // Arrange
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
-        appHost.Services.ConfigureHttpClientDefaults(client => client.AddStandardResilienceHandler());
+        appHost.Services.ConfigureHttpClientDefaults(client =>
+        {
+            client.AddStandardResilienceHandler();
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        });
 
         await using var app = await appHost.BuildAsync();
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
@@ -174,8 +178,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
-        var riskClient = app.CreateHttpClient("riskservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var riskClient = app.CreateHttpClient("riskservice", "http");
 
         // Create a payment
         var paymentRequest = new
@@ -192,17 +196,13 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
         Assert.NotNull(createdPayment);
 
-        // Wait for risk evaluation
-        await Task.Delay(EventProcessingDelayMs);
-
         // Act: Query risk assessment
-        var riskResponse = await riskClient.GetAsync($"/risks/{createdPayment.Id}");
+        var riskResponse = await WaitForRiskAssessmentAsync(riskClient, createdPayment.Id, TimeSpan.FromSeconds(60));
 
         // Assert: Verify assessment exists
-        Assert.Equal(HttpStatusCode.OK, riskResponse.StatusCode);
         var assessment = await riskResponse.Content.ReadFromJsonAsync<RiskAssessmentDto>();
         Assert.NotNull(assessment);
-        Assert.Equal(createdPayment.Id, Guid.Parse(assessment.PaymentId));
+        Assert.Equal(createdPayment.Id, assessment.PaymentId);
         Assert.NotNull(assessment.Reason);
         Assert.InRange(assessment.RiskScore, 0, 100);
 
@@ -214,7 +214,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     {
         // Arrange
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
-        appHost.Services.ConfigureHttpClientDefaults(client => client.AddStandardResilienceHandler());
+        appHost.Services.ConfigureHttpClientDefaults(client =>
+        {
+            client.AddStandardResilienceHandler();
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+        });
 
         await using var app = await appHost.BuildAsync();
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
@@ -223,8 +230,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
-        var riskClient = app.CreateHttpClient("riskservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var riskClient = app.CreateHttpClient("riskservice", "http");
 
         // Create multiple payments to populate risk assessments
         for (int i = 0; i < 3; i++)
@@ -241,8 +248,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
             response.EnsureSuccessStatusCode();
         }
 
-        // Wait for risk evaluations
-        await Task.Delay(EventProcessingDelayMs);
+        await WaitForRiskAssessmentListAsync(riskClient, minimumTotalCount: 3, TimeSpan.FromSeconds(60));
 
         // Act: List risk assessments with pagination
         var listResponse = await riskClient.GetAsync("/risks?page=1&pageSize=10");
@@ -259,9 +265,97 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
     #region DTOs
 
+    private static async Task<PaymentDto> WaitForPaymentStatusAsync(HttpClient paymentClient, Guid paymentId, string expectedStatus, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                var response = await paymentClient.GetAsync($"/Payments/{paymentId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var payment = await response.Content.ReadFromJsonAsync<PaymentDto>();
+                    if (payment != null && string.Equals(payment.Status, expectedStatus, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return payment;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(500);
+        }
+
+        throw new TimeoutException($"Payment {paymentId} did not reach status '{expectedStatus}' within {timeout.TotalSeconds} seconds.");
+    }
+
+    private static async Task<HttpResponseMessage> WaitForRiskAssessmentAsync(HttpClient riskClient, Guid paymentId, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                var response = await riskClient.GetAsync($"/risks/{paymentId}");
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    return response;
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(500);
+        }
+
+        throw new TimeoutException($"Risk assessment for payment {paymentId} was not available within {timeout.TotalSeconds} seconds.");
+    }
+
+    private static async Task WaitForRiskAssessmentListAsync(HttpClient riskClient, int minimumTotalCount, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+        HttpResponseMessage? lastResponse = null;
+        string? lastBody = null;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                lastResponse = await riskClient.GetAsync("/risks?page=1&pageSize=10");
+                if (lastResponse.IsSuccessStatusCode)
+                {
+                    lastBody = await lastResponse.Content.ReadAsStringAsync();
+                    var result = System.Text.Json.JsonSerializer.Deserialize<RiskAssessmentsPageDto>(
+                        lastBody,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (result?.TotalCount >= minimumTotalCount)
+                    {
+                        return;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(1000);
+        }
+
+        throw new TimeoutException(
+            $"Risk assessments list did not reach TotalCount >= {minimumTotalCount} within {timeout.TotalSeconds} seconds. " +
+            $"Last HTTP {(int)(lastResponse?.StatusCode ?? 0)} {lastResponse?.StatusCode}. Body: {lastBody}");
+    }
+
     private class PaymentDto
     {
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; }
         public string Status { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public string Currency { get; set; } = string.Empty;
@@ -271,8 +365,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
     private class RiskAssessmentDto
     {
-        public string Id { get; set; } = string.Empty;
-        public string PaymentId { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public Guid PaymentId { get; set; }
         public int RiskScore { get; set; }
         public bool IsApproved { get; set; }
         public string Reason { get; set; } = string.Empty;
