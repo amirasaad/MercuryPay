@@ -29,34 +29,34 @@ else
         settings.DisableRetry = false); // Enable retry for resilience
 }
 
-// Add Event Bus with Outbox configuration
-builder.AddEventBus(x => 
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus
-    x.AddConsumer<PaymentCreatedConsumer>();
-    // LoanApprovedConsumer removed in favor of PaymentService flow
-    x.AddConsumer<LoanRepaymentRequestedConsumer>();
-    
-    if (!string.IsNullOrEmpty(connectionString))
+    builder.AddEventBus(x =>
     {
-        x.AddEntityFrameworkOutbox<WalletDbContext>(o =>
+        x.AddConsumer<PaymentCreatedConsumer>();
+        x.AddConsumer<LoanRepaymentRequestedConsumer>();
+        
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            o.QueryDelay = TimeSpan.FromSeconds(1);
-            o.UsePostgres();
-            o.UseBusOutbox();
-        });
-    }
+            x.AddEntityFrameworkOutbox<WalletDbContext>(o =>
+            {
+                o.QueryDelay = TimeSpan.FromSeconds(1);
+                o.UsePostgres();
+                o.UseBusOutbox();
+            });
+        }
 
-    var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
-    if (!string.IsNullOrEmpty(messagingConnectionString))
-    {
-        x.UsingRabbitMq((context, cfg) =>
+        var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
+        if (!string.IsNullOrEmpty(messagingConnectionString))
         {
-            ConfigureRabbitMqHost(cfg, messagingConnectionString);
-            cfg.ConfigureEndpoints(context);
-        });
-    }
-});
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                ConfigureRabbitMqHost(cfg, messagingConnectionString);
+                cfg.ConfigureEndpoints(context);
+            });
+        }
+    });
+}
 
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();

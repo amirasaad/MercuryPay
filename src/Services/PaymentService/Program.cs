@@ -29,21 +29,22 @@ else
         settings.DisableRetry = false); // Enable retry for resilience
 }
 
-// Add Event Bus with Outbox configuration
-builder.AddEventBus((x) =>
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    // x.SetKebabCaseEndpointNameFormatter(); // Already set in AddEventBus extension
-    
-    x.AddConsumer<LoanApprovedConsumer>();
-    x.AddConsumer<FraudEvaluatedConsumer>();
-    x.AddConsumer<LoanInvalidatedConsumer>();
-
-    var messagingConnectionString = builder.Configuration.GetConnectionString("messaging");
-    if (!string.IsNullOrEmpty(messagingConnectionString))
+    builder.AddEventBus((x) =>
     {
+        x.AddConsumer<LoanApprovedConsumer>();
+        x.AddConsumer<FraudEvaluatedConsumer>();
+        x.AddConsumer<LoanInvalidatedConsumer>();
         x.UsingRabbitMq((context, cfg) =>
         {
-            ConfigureRabbitMqHost(cfg, messagingConnectionString);
+            var rabbitMqConnectionString = builder.Configuration.GetConnectionString("messaging");
+            if (string.IsNullOrWhiteSpace(rabbitMqConnectionString))
+            {
+                throw new InvalidOperationException("RabbitMQ connection is not configured.");
+            }
+
+            ConfigureRabbitMqHost(cfg, rabbitMqConnectionString);
             
             cfg.ReceiveEndpoint("loan-approved", e =>
             {
@@ -53,18 +54,18 @@ builder.AddEventBus((x) =>
 
             cfg.ConfigureEndpoints(context);
         });
-    }
 
-    if (!string.IsNullOrEmpty(connectionString))
-    {
-        x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            o.QueryDelay = TimeSpan.FromSeconds(1);
-            o.UsePostgres();
-            o.UseBusOutbox();
-        });
-    }
-});
+            x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+            {
+                o.QueryDelay = TimeSpan.FromSeconds(1);
+                o.UsePostgres();
+                o.UseBusOutbox();
+            });
+        }
+    });
+}
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
