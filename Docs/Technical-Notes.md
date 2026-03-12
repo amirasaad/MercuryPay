@@ -26,6 +26,20 @@ To validate system stability under concurrent load, we implemented a dedicated l
 
 ## Concurrency Control
 
+### Wallet Balance (Optimistic Concurrency)
+
+- **Problem**: Concurrent requests to credit or debit the same wallet could read the same balance, both compute a new value, and one write would silently overwrite the other — resulting in a lost update and corrupted balance.
+- **Solution**: Implemented **Optimistic Concurrency** via the PostgreSQL `xmin` system column on the `Wallets` table.
+- **Mechanism**: EF Core maps the `xmin` column as a row-version concurrency token:
+
+  ```csharp
+  modelBuilder.Entity<Wallet>()
+      .Property(w => w.RowVersion)
+      .IsRowVersion();
+  ```
+
+  On every `UPDATE`, EF Core automatically includes `WHERE xmin = <last-read-value>` in the query. If another transaction modified the row between the read and the write, `xmin` will have changed, EF will find zero rows updated, and will throw `DbUpdateConcurrencyException`. Callers can then retry with a fresh read.
+
 ### Loan Repayment
 
 - **Problem**: Concurrent requests to repay the same loan could result in double-charging the user or inconsistent loan states.
