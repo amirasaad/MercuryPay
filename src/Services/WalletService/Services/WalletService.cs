@@ -72,7 +72,9 @@ public class WalletService(WalletDbContext context, ILogger<WalletService> logge
     {
         _logger.LogInformation("Crediting wallet {WalletId} with amount {Amount}", id, amount);
         
-        var domainWallet = _context.Wallets.Include(w => w.Ledger).FirstOrDefault(w => w.Id == id);
+        var domainWallet = _context.Wallets
+            .Include(w => w.Ledger.Where(e => e.TransactionId == transactionId))
+            .FirstOrDefault(w => w.Id == id);
         if (domainWallet == null) 
         {
             _logger.LogWarning("Wallet {WalletId} not found for credit operation", id);

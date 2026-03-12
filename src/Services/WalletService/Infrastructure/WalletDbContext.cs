@@ -16,7 +16,7 @@ public class WalletDbContext(DbContextOptions<WalletDbContext> options) : DbCont
 
         // Optimistic concurrency: xmin is the PostgreSQL row-version column
         modelBuilder.Entity<Wallet>()
-            .Property(w => w.RowVersion)
+            .Property<uint>("xmin")
             .IsRowVersion();
 
         // Enforce unique wallet per user/currency pair

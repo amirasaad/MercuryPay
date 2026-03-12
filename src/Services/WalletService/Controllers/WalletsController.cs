@@ -16,12 +16,19 @@ public class WalletsController(IWalletService walletService) : ControllerBase
     [HttpPost]
     public IActionResult Create([FromBody] CreateWalletRequest request)
     {
+        var claimsUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(claimsUserId))
+            return BadRequest("UserId is required.");
+
         if (string.IsNullOrWhiteSpace(request.UserId))
         {
-            var claimsUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrWhiteSpace(claimsUserId))
-                return BadRequest("UserId is required.");
+            // Auto-fill the UserId from the authenticated user's claims when not provided
             request = request with { UserId = claimsUserId };
+        }
+        else if (!string.Equals(request.UserId, claimsUserId, StringComparison.Ordinal))
+        {
+            // Prevent privilege escalation: callers may not create wallets for other users
+            return Forbid();
         }
 
         if (string.IsNullOrWhiteSpace(request.Currency))
@@ -65,6 +72,8 @@ public class WalletsController(IWalletService walletService) : ControllerBase
 
         // Enforce ownership: only the wallet owner may read it
         var requestingUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(requestingUserId))
+            return Unauthorized();
         if (wallet.UserId != requestingUserId)
             return Forbid();
 
