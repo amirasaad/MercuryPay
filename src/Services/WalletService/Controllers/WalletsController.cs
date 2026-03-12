@@ -16,9 +16,12 @@ public class WalletsController(IWalletService walletService) : ControllerBase
     [HttpPost]
     public IActionResult Create([FromBody] CreateWalletRequest request)
     {
-        // Override UserId with authenticated user
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var wallet = _walletService.CreateWallet(userId ?? request.UserId, request.Currency);
+        var resolvedUserId = string.IsNullOrWhiteSpace(request.UserId) && !string.IsNullOrWhiteSpace(userId)
+            ? userId
+            : request.UserId;
+
+        var wallet = _walletService.CreateWallet(resolvedUserId, request.Currency);
         return CreatedAtAction(nameof(Get), new { id = wallet.Id }, wallet);
     }
 

@@ -19,9 +19,10 @@ public class PaymentsController(IPaymentService paymentService) : ControllerBase
     {
         try
         {
-            // Override FromUserId with authenticated user
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var paymentReq = request with { FromUserId = userId ?? request.FromUserId };
+            var paymentReq = string.IsNullOrWhiteSpace(request.FromUserId) && !string.IsNullOrWhiteSpace(userId)
+                ? request with { FromUserId = userId }
+                : request;
 
             var response = await _paymentService.CreatePayment(paymentReq);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
