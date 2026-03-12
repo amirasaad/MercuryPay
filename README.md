@@ -15,6 +15,7 @@ dotnet run --project src/MercuryPay.AppHost
 ## Documentation
 
 - [Project Requirements & Traceability Matrix](Docs/Requirements.md)
+- [Findings & Issue Tracking Backlog](Docs/Findings-Backlog.md)
 - [Payment Service Design](Docs/PaymentService-Design.md)
 - [Wallet Service Design](Docs/WalletService-Design.md)
 - [Commit Guidelines](Docs/Commit-Guidelines.md)
