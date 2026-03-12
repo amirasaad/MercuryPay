@@ -16,35 +16,43 @@ public class WalletsController(IWalletService walletService) : ControllerBase
     [HttpPost]
     public IActionResult Create([FromBody] CreateWalletRequest request)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var resolvedUserId = string.IsNullOrWhiteSpace(request.UserId) && !string.IsNullOrWhiteSpace(userId)
-            ? userId
-            : request.UserId;
+        if (string.IsNullOrWhiteSpace(request.UserId))
+        {
+            var claimsUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(claimsUserId))
+                return BadRequest("UserId is required.");
+            request = request with { UserId = claimsUserId };
+        }
 
-        var wallet = _walletService.CreateWallet(resolvedUserId, request.Currency);
-        return CreatedAtAction(nameof(Get), new { id = wallet.Id }, wallet);
+        if (string.IsNullOrWhiteSpace(request.Currency))
+            return BadRequest("Currency is required.");
+
+        try
+        {
+            var wallet = _walletService.CreateWallet(request.UserId, request.Currency);
+            return CreatedAtAction(nameof(Get), new { id = wallet.Id }, wallet);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public IActionResult GetWallets()
     {
-        var userId = HttpContext.Request.Query["userId"].ToString();
-        if (string.IsNullOrEmpty(userId))
-        {
-            userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-        }
-        if (string.IsNullOrEmpty(userId))
-        {
-            return BadRequest("User ID not found in token or query");
-        }
+        var requestingUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(requestingUserId))
+            return Unauthorized();
+
+        // Allow an explicit userId query param only if it matches the authenticated user
+        var queryUserId = HttpContext.Request.Query["userId"].ToString();
+        var userId = string.IsNullOrEmpty(queryUserId) ? requestingUserId : queryUserId;
+
+        if (userId != requestingUserId)
+            return Forbid();
 
         var wallets = _walletService.GetWalletsByUserId(userId);
-        if (!wallets.Any())
-        {
-            var created = _walletService.CreateWallet(userId, "USD");
-            wallets = _walletService.GetWalletsByUserId(userId);
-        }
         return Ok(wallets);
     }
 
@@ -53,18 +61,29 @@ public class WalletsController(IWalletService walletService) : ControllerBase
     {
         var wallet = _walletService.GetWallet(id);
         if (wallet == null)
-        {
             return NotFound();
-        }
+
+        // Enforce ownership: only the wallet owner may read it
+        var requestingUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (wallet.UserId != requestingUserId)
+            return Forbid();
+
         return Ok(wallet);
     }
 
     [HttpPost("{id}/credit")]
-    public IActionResult Credit(Guid id, [FromBody] decimal amount)
+    public IActionResult Credit(Guid id, [FromBody] CreditWalletRequest request)
     {
+        if (request.Amount <= 0)
+            return BadRequest("Amount must be positive.");
+        if (string.IsNullOrWhiteSpace(request.TransactionId))
+            return BadRequest("TransactionId is required.");
+        if (string.IsNullOrWhiteSpace(request.Description))
+            return BadRequest("Description is required.");
+
         try
         {
-            _walletService.CreditWallet(id, amount);
+            _walletService.CreditWallet(id, request.Amount, request.TransactionId, request.Description);
             return Ok();
         }
         catch (KeyNotFoundException)
