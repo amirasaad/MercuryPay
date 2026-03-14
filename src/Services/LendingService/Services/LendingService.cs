@@ -74,17 +74,21 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
 
     public async Task<Loan?> GetLoan(Guid id)
     {
-        return await _context.Loans.FindAsync(id);
+        return await QueryLoansWithRepaymentSchedule()
+            .FirstOrDefaultAsync(loan => loan.Id == id);
     }
 
     public async Task<List<Loan>> GetLoansByUser(string userId)
     {
-        return await _context.Loans.Where(l => l.UserId == userId).ToListAsync();
+        return await QueryLoansWithRepaymentSchedule()
+            .Where(loan => loan.UserId == userId)
+            .ToListAsync();
     }
 
     public async Task<bool> RetryDisbursement(Guid loanId)
     {
-        var loan = await _context.Loans.FindAsync(loanId);
+        var loan = await QueryLoansWithRepaymentSchedule()
+            .FirstOrDefaultAsync(existingLoan => existingLoan.Id == loanId);
         if (loan == null)
         {
             _logger.LogWarning("Loan {LoanId} not found for retry", loanId);
@@ -159,5 +163,12 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         {
             gate.Release();
         }
+    }
+
+    private IQueryable<Loan> QueryLoansWithRepaymentSchedule()
+    {
+        return _context.Loans
+            .Include(loan => loan.RepaymentSchedule)
+            .ThenInclude(schedule => schedule!.Installments);
     }
 }
