@@ -123,6 +123,9 @@ The Lending Service manages loan lifecycles.
   - *Acceptance Criteria*: Domain callers cannot arbitrarily modify installment amounts outside of defined business methods.
 - **REQ-LEND-007** *(Pending)*: The system MUST publish explicit `RepaymentProcessed` or `RepaymentFailed` outcome events upon repayment processing.
   - *Acceptance Criteria*: Upstream and downstream services receive deterministic outcome events; no repayment workflow ends with a log-only outcome.
+- **REQ-LEND-008**: The system MUST enforce a configurable maximum loan amount.
+  - *Default Limit*: $100,000 unless overridden by configuration.
+  - *Acceptance Criteria*: API returns 400 Bad Request when the requested amount exceeds the configured maximum; the limit is configurable and documented.
 
 ### 4.4 Risk Service
 
@@ -217,6 +220,13 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 - **When** they attempt to access the wallet of User B
 - **Then** the API returns 403 Forbidden
 - *Note*: Ownership enforcement is pending implementation.
+
+### UAC-LEND-01: Fraud Cancellation
+
+- **Given** a loan has been created and has unpaid installments
+- **When** the Risk Service publishes a `FraudEvaluated` event with `IsSafe = false` for that loan
+- **Then** the loan status becomes "FraudDetected"
+- **And** all unpaid installments transition to "Cancelled"
 
 ## 7. Traceability Matrix
 
