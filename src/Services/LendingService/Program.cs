@@ -70,9 +70,7 @@ else
 // Add Services
 builder.Services.AddScoped<ILendingService, LendingService>();
 
-// Register Cleanup Service
-builder.Services.AddSingleton<DataCleanupService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<DataCleanupService>());
+// Cleanup service removed
 
 var app = builder.Build();
 

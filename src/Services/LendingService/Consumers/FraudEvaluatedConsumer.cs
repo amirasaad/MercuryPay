@@ -6,10 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MercuryPay.LendingService.Consumers;
 
-public class FraudEvaluatedConsumer(LendingDbContext context, ILogger<FraudEvaluatedConsumer> logger) : IConsumer<FraudEvaluated>
+public class FraudEvaluatedConsumer(LendingDbContext context, ILogger<FraudEvaluatedConsumer> logger, IPublishEndpoint publishEndpoint) : IConsumer<FraudEvaluated>
 {
     private readonly LendingDbContext _context = context;
     private readonly ILogger<FraudEvaluatedConsumer> _logger = logger;
+    private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
 
     public async Task Consume(ConsumeContext<FraudEvaluated> context)
     {
@@ -34,7 +35,17 @@ public class FraudEvaluatedConsumer(LendingDbContext context, ILogger<FraudEvalu
         {
             _logger.LogWarning("Loan {LoanId} flagged as fraud. Marking as FraudDetected.", loan.Id);
             loan.MarkAsFraudDetected();
+            _context.Update(loan);
             await _context.SaveChangesAsync();
+
+            await _publishEndpoint.Publish(new LoanFraudDetected(
+                loan.Id,
+                loan.UserId,
+                loan.Amount,
+                loan.Currency,
+                "Fraud detected",
+                DateTimeOffset.UtcNow
+            ));
         }
         else
         {

@@ -51,6 +51,24 @@ public class LoanTests
     }
 
     [Fact]
+    public void MarkAsFraudDetected_ShouldCancelAllPendingInstallments()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        loan.GenerateRepaymentSchedule();
+        loan.MarkAsFraudDetected();
+        Assert.All(loan.RepaymentSchedule!.Installments, i =>
+            Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
+        Assert.Equal("FraudDetected", loan.Status);
+    }
+
+    [Fact]
+    public void Loan_WhenAmountExceedsMaximum_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 100001m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+    }
+
+    [Fact]
     public void ProcessRepayment_ShouldHandlePartialPayments()
     {
         // Arrange

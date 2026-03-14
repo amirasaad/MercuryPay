@@ -35,7 +35,6 @@ if (!builder.Environment.IsEnvironment("Testing"))
     {
         x.AddConsumer<LoanApprovedConsumer>();
         x.AddConsumer<FraudEvaluatedConsumer>();
-        x.AddConsumer<LoanInvalidatedConsumer>();
         x.UsingRabbitMq((context, cfg) =>
         {
             var rabbitMqConnectionString = builder.Configuration.GetConnectionString("messaging");
