@@ -593,7 +593,7 @@ public class TestDocIndex
         {
             foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Any()
+                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Length != 0
                               || m.GetCustomAttributes(typeof(TheoryAttribute), true).Any();
                 if (!hasFact) continue;
 
@@ -618,9 +618,9 @@ public class TestDocIndex
         }
 
         items.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
-        foreach (var item in items)
+        foreach (var (id, fqn) in items)
         {
-            _output.WriteLine($"{item.id} -> {item.fqn}");
+            _output.WriteLine($"{id} -> {fqn}");
         }
 
         Assert.True(items.Count > 0);
@@ -719,8 +719,8 @@ public class TraceabilityMatrixTests
         {
             foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Any()
-                              || m.GetCustomAttributes(typeof(TheoryAttribute), true).Any();
+                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Length != 0
+                              || m.GetCustomAttributes(typeof(TheoryAttribute), true).Length != 0;
                 if (!hasFact) continue;
                 foreach (var cad in m.CustomAttributes)
                 {

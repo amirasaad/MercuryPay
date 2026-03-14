@@ -1,9 +1,11 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
+using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,6 +40,22 @@ public class EndToEndTests(ITestOutputHelper output)
 
         paymentClient.Timeout = TimeSpan.FromMinutes(2);
         walletClient.Timeout = TimeSpan.FromMinutes(2);
+        
+        // Build simple dev JWTs that the Dev auth pipeline accepts in Development with validation disabled
+        static string CreateDevJwt(string subject)
+        {
+            static string B64Url(string json)
+            {
+                var bytes = Encoding.UTF8.GetBytes(json);
+                return Convert.ToBase64String(bytes)
+                    .TrimEnd('=')
+                    .Replace('+', '-')
+                    .Replace('/', '_');
+            }
+            var header = B64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");
+            var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
+            return $"{header}.{payload}.";
+        }
 
         output.WriteLine($"PaymentService BaseAddress: {paymentClient.BaseAddress}");
         output.WriteLine($"WalletService BaseAddress: {walletClient.BaseAddress}");
@@ -80,7 +98,8 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 1. Create Sender Wallet
         output.WriteLine("Creating Sender Wallet...");
-        var createFromWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = fromUserId, Currency = currency });
+        walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
+        var createFromWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
         output.WriteLine($"Create Sender Wallet Response: {createFromWalletResponse.StatusCode}");
         if (!createFromWalletResponse.IsSuccessStatusCode)
         {
@@ -93,6 +112,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 2. Credit Sender Wallet
         output.WriteLine("Crediting Sender Wallet...");
+        walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
         var creditResponse = await PostWithRetriesAsync(walletClient, $"/Wallets/{fromWallet.Id}/credit", initialCredit);
         output.WriteLine($"Credit Response: {creditResponse.StatusCode}");
         creditResponse.EnsureSuccessStatusCode();
@@ -103,7 +123,8 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 3. Create Receiver Wallet
         output.WriteLine("Creating Receiver Wallet...");
-        var createToWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = toUserId, Currency = currency });
+        walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(toUserId));
+        var createToWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
         createToWalletResponse.EnsureSuccessStatusCode();
         var toWallet = await createToWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
         Assert.NotNull(toWallet);
@@ -111,6 +132,7 @@ public class EndToEndTests(ITestOutputHelper output)
         // 4. Create Payment
         output.WriteLine("Creating Payment...");
         var paymentRequest = new PaymentRequest(fromUserId, toUserId, paymentAmount, currency);
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
         var createPaymentResponse = await PostWithRetriesAsync(paymentClient, "/Payments", paymentRequest);
         output.WriteLine($"Create Payment Response: {createPaymentResponse.StatusCode}");
         if (!createPaymentResponse.IsSuccessStatusCode)
@@ -122,7 +144,9 @@ public class EndToEndTests(ITestOutputHelper output)
 
         // 5. Poll for balance updates
         output.WriteLine("Polling for balance updates...");
+        walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
         await PollForBalanceAsync(walletClient, fromWallet.Id, initialCredit - paymentAmount);
+        walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(toUserId));
         await PollForBalanceAsync(walletClient, toWallet.Id, paymentAmount);
     }
 

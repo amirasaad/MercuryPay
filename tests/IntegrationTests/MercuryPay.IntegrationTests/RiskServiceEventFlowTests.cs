@@ -4,6 +4,7 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,6 +44,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
         // Act: Create a low-value payment (should be approved)
         var newPaymentRequest = new
@@ -89,6 +91,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
         // Act: Create a high-value payment
         var highValueRequest = new
@@ -180,6 +183,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
         var riskClient = app.CreateHttpClient("riskservice", "http");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        riskClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
         // Create a payment
         var paymentRequest = new
@@ -232,6 +237,8 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
         var riskClient = app.CreateHttpClient("riskservice", "http");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        riskClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
         // Create multiple payments to populate risk assessments
         for (int i = 0; i < 3; i++)
