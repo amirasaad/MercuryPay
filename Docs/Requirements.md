@@ -256,6 +256,7 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 | **REQ-LEND-005** | Strongly-typed loan status | P2 | `LendingService.Domain.Loan` | `TEST-LEND-005` | **Pending** |
 | **REQ-LEND-006** | Reduce Installment mutability | P2 | `LendingService.Domain.Installment` | `TEST-LEND-006` | **Pending** |
 | **REQ-LEND-007** | Publish repayment outcome events | P1 | `LendingService.Consumers` | `TEST-LEND-INT-001` | **Pending** |
+| **REQ-LEND-008** | Enforce maximum loan amount | P1 | `LendingService.Domain.Loan` | `TEST-LEND-008` | Implemented |
 | **REQ-GW-001** | YARP routes/clusters | P1 | `ApiGateway.Program` | `TEST-GW-001` | **Pending** |
 | **REQ-GW-002** | Gateway JWT auth | P0 | `ApiGateway.Program` | `TEST-GW-002` | **Pending** |
 | **REQ-GW-003** | Rate limiting | P1 | `ApiGateway.Program` | `TEST-GW-003` | **Planned** |
