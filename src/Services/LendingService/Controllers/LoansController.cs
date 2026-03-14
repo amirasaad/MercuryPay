@@ -26,9 +26,15 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             ? User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? request.UserId 
             : request.UserId;
 
-        var loan = await _lendingService.CreateLoan(userId, request.Amount, request.Currency, request.TermMonths);
-        
-        return CreatedAtAction(nameof(Get), new { id = loan.Id }, MapToResponse(loan));
+        try
+        {
+            var loan = await _lendingService.CreateLoan(userId, request.Amount, request.Currency, request.TermMonths);
+            return CreatedAtAction(nameof(Get), new { id = loan.Id }, MapToResponse(loan));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("{id}")]

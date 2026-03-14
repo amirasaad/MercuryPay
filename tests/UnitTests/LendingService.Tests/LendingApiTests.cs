@@ -227,6 +227,22 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     [Fact]
+    public async Task CreateLoan_ReturnsBadRequest_WhenAmountExceedsMaximum()
+    {
+        var client = _factory.CreateClient();
+        var request = new
+        {
+            UserId = "user_123",
+            Amount = 100001.00m,
+            Currency = "USD"
+        };
+
+        var response = await client.PostAsJsonAsync("/loans", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetLoan_ReturnsOk_WhenLoanExists()
     {
         // Arrange
