@@ -24,6 +24,9 @@ public class LendingDbContext(DbContextOptions<LendingDbContext> options) : DbCo
             entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.AnnualInterestRate).HasPrecision(6, 4);
+            
+            // Hot-path index for common queries: list loans for a user ordered by creation time
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
 
             entity.OwnsOne(e => e.RepaymentSchedule, schedule =>
             {
