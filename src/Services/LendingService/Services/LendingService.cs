@@ -36,8 +36,8 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
 
         if (amount > MaxLoanAmount)
         {
-            _logger.LogWarning("Loan amount {Amount} exceeds maximum limit of {MaxAmount}. Marking for manual review/cleanup.", amount, MaxLoanAmount);
-            // Allow creation for now, let DataCleanupService handle it (simulating async validation or legacy data)
+            _logger.LogWarning("Loan amount {Amount} exceeds maximum limit of {MaxAmount}.", amount, MaxLoanAmount);
+            throw new ArgumentException("Amount exceeds maximum allowed");
         }
 
         if (termMonths <= 0 || termMonths > 120)

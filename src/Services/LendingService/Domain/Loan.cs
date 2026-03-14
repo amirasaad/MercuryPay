@@ -4,7 +4,7 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
 {
     public Guid Id { get; private set; } = id;
     public string UserId { get; private set; } = userId;
-    public decimal Amount { get; private set; } = amount;
+    public decimal Amount { get; private set; } = amount > 100000m ? throw new ArgumentException("Amount exceeds maximum allowed") : amount;
     public string Currency { get; private set; } = currency;
     public string Status { get; private set; } = status;
     public DateTime CreatedAt { get; private set; } = createdAt;
@@ -57,11 +57,7 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
     public void MarkAsFraudDetected()
     {
         Status = "FraudDetected";
-    }
-
-    public void MarkAsInvalid()
-    {
-        Status = "Invalid";
+        CancelPendingInstallments();
     }
 
     public void RetryDisbursement()
@@ -132,6 +128,18 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
         else
         {
             Status = "Active"; 
+        }
+    }
+
+    public void CancelPendingInstallments()
+    {
+        if (RepaymentSchedule == null) return;
+        foreach (var i in RepaymentSchedule.Installments)
+        {
+            if (i.Status == "Pending" || i.Status == "PartiallyPaid")
+            {
+                i.Status = "Cancelled";
+            }
         }
     }
 }
