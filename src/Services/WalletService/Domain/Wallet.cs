@@ -11,9 +11,6 @@ public class Wallet
     public decimal Balance { get; private set; }
     public string Currency { get; private set; }
 
-    // Optimistic concurrency token – updated automatically by EF Core on each write
-    public uint RowVersion { get; private set; }
-
     // EF Core navigation property
     public virtual ICollection<LedgerEntry> Ledger { get; private set; } = new List<LedgerEntry>();
 
