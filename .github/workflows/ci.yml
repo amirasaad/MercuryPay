@@ -39,12 +39,12 @@ jobs:
 
       - name: Unit tests
         run: |
-          dotnet test tests/UnitTests/MercuryPay.Workflow.Tests/MercuryPay.Workflow.Tests.csproj -c Release --no-build
-          dotnet test tests/UnitTests/LendingService.Tests/MercuryPay.LendingService.Tests.csproj -c Release --no-build
-          dotnet test tests/UnitTests/PaymentService.Tests/MercuryPay.PaymentService.Tests.csproj -c Release --no-build
-          dotnet test tests/UnitTests/WalletService.Tests/MercuryPay.WalletService.Tests.csproj -c Release --no-build
-          dotnet test tests/UnitTests/RiskService.Tests/MercuryPay.RiskService.Tests.csproj -c Release --no-build
-          dotnet test tests/UnitTests/Web.Tests/MercuryPay.Web.Tests.csproj -c Release --no-build
+          dotnet test tests/UnitTests/MercuryPay.Workflow.Tests/MercuryPay.Workflow.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
+          dotnet test tests/UnitTests/LendingService.Tests/MercuryPay.LendingService.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
+          dotnet test tests/UnitTests/PaymentService.Tests/MercuryPay.PaymentService.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
+          dotnet test tests/UnitTests/WalletService.Tests/MercuryPay.WalletService.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
+          dotnet test tests/UnitTests/RiskService.Tests/MercuryPay.RiskService.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
+          dotnet test tests/UnitTests/Web.Tests/MercuryPay.Web.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=70 /p:ThresholdType=line
 
   integration:
     runs-on: ubuntu-latest
@@ -67,5 +67,26 @@ jobs:
 
       - name: Integration tests
         run: |
-          dotnet test tests/IntegrationTests/Resilience.Tests/Resilience.Tests.csproj -c Release --no-build
-          dotnet test tests/IntegrationTests/MercuryPay.IntegrationTests/MercuryPay.IntegrationTests.csproj -c Release --no-build
+          dotnet test tests/IntegrationTests/Resilience.Tests/Resilience.Tests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=50 /p:ThresholdType=line
+          dotnet test tests/IntegrationTests/MercuryPay.IntegrationTests/MercuryPay.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=50 /p:ThresholdType=line
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore
+        run: dotnet restore MercuryPay.slnx
+      - name: Build
+        run: dotnet build MercuryPay.slnx -c Release --no-restore
+      - name: E2E tests
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: 0
+        run: |
+          dotnet test tests/E2E/MercuryPay.E2E.Tests/MercuryPay.E2E.Tests.csproj -c Release --no-build -p:ExcludeE2ETests=false /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=40 /p:ThresholdType=line
