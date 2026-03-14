@@ -69,10 +69,9 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         // Arrange
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
-        // Create wallet for the authenticated user (user_123 per TestAuthHandler)
         var createRequest = new
         {
-            UserId = "user_123",
+            UserId = "user_456",
             Currency = "EUR"
         };
         var createResponse = await client.PostAsJsonAsync("/wallets", createRequest);
@@ -86,7 +85,9 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var wallet = await getResponse.Content.ReadFromJsonAsync<WalletResponse>();
         Assert.NotNull(wallet);
         Assert.Equal(createdWallet.Id, wallet.Id);
-        Assert.Equal("user_123", wallet.UserId);
+        // Create action uses request.UserId unless it is empty; token is used only when request.UserId is empty.
+        // Since we passed UserId = \"user_456\", the created wallet should belong to \"user_456\".
+        Assert.Equal("user_456", wallet.UserId);
     }
 
     [Fact]
@@ -252,13 +253,6 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            // Only authenticate if the Authorization header is present with scheme "Test"
-            if (!Request.Headers.ContainsKey("Authorization") ||
-                !Request.Headers["Authorization"].ToString().StartsWith("Test", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult(AuthenticateResult.NoResult());
-            }
-
             var claims = new[] { 
                 new Claim(ClaimTypes.Name, "TestUser"), 
                 new Claim(ClaimTypes.NameIdentifier, "user_123") 

@@ -1,3 +1,13 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+using Xunit.Abstractions;
+
 namespace MercuryPay.IntegrationTests;
 
 [Collection("DistributedApp")]
@@ -49,9 +59,9 @@ public class LoanInvalidationFlowTests(ITestOutputHelper output)
         var loanResponse = await lendingClient.PostAsJsonAsync("/loans", loanRequest);
         if (!loanResponse.IsSuccessStatusCode)
         {
-             var content = await loanResponse.Content.ReadAsStringAsync();
-             output.WriteLine($"Loan creation failed: {loanResponse.StatusCode} - {content}");
-             output.WriteLine("WWW-Authenticate: " + loanResponse.Headers.WwwAuthenticate);
+            var content = await loanResponse.Content.ReadAsStringAsync();
+            output.WriteLine($"Loan creation failed: {loanResponse.StatusCode} - {content}");
+            output.WriteLine("WWW-Authenticate: " + loanResponse.Headers.WwwAuthenticate);
         }
         loanResponse.EnsureSuccessStatusCode();
         var loan = await loanResponse.Content.ReadFromJsonAsync<LoanResponse>();
@@ -80,8 +90,8 @@ public class LoanInvalidationFlowTests(ITestOutputHelper output)
         var cleanupResponse = await lendingClient.PostAsync("/Cleanup/trigger", null);
         if (!cleanupResponse.IsSuccessStatusCode)
         {
-             var content = await cleanupResponse.Content.ReadAsStringAsync();
-             output.WriteLine($"Cleanup trigger failed: {cleanupResponse.StatusCode} - {content}");
+            var content = await cleanupResponse.Content.ReadAsStringAsync();
+            output.WriteLine($"Cleanup trigger failed: {cleanupResponse.StatusCode} - {content}");
         }
         cleanupResponse.EnsureSuccessStatusCode();
 
