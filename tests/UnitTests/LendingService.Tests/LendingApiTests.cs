@@ -357,6 +357,67 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
+    
+    [Theory]
+    [InlineData("AC-LEND-FRAUD-CANCEL")]
+    [InlineData("AC-LEND-AMOUNT-MAX-400")]
+    public async Task SpecIndex_CoversDocumentedAcceptanceScenarios(string scenario)
+    {
+        switch (scenario)
+        {
+            case "AC-LEND-FRAUD-CANCEL":
+                await Scenario_FraudDetected_CancelsPendingInstallments();
+                break;
+            case "AC-LEND-AMOUNT-MAX-400":
+                await Scenario_CreateLoan_AmountExceedsMax_ReturnsBadRequest();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario), scenario);
+        }
+    }
+
+    private async Task Scenario_FraudDetected_CancelsPendingInstallments()
+    {
+        var client = _factory.CreateClient();
+        var harness = _factory.Services.GetRequiredService<ITestHarness>();
+
+        var createRequest = new { UserId = "user_123", Amount = 2500.00m, Currency = "USD" };
+        var createResponse = await client.PostAsJsonAsync("/loans", createRequest);
+        createResponse.EnsureSuccessStatusCode();
+        var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
+
+        await harness.Start();
+        try
+        {
+            await harness.Bus.Publish(new FraudEvaluated(Guid.NewGuid(), false, 97, "High risk", DateTimeOffset.UtcNow, loan!.Id));
+            var consumed = false;
+            for (int i = 0; i < 30; i++)
+            {
+                if (await harness.Consumed.Any<FraudEvaluated>()) { consumed = true; break; }
+                await Task.Delay(100);
+            }
+            Assert.True(consumed);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+
+        var getResponse = await client.GetAsync($"/loans/{loan!.Id}");
+        getResponse.EnsureSuccessStatusCode();
+        var updated = await getResponse.Content.ReadFromJsonAsync<LoanResponse>();
+        Assert.Equal("FraudDetected", updated!.Status);
+        Assert.All(updated!.RepaymentSchedule!.Installments, i =>
+            Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
+    }
+
+    private async Task Scenario_CreateLoan_AmountExceedsMax_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+        var request = new { UserId = "user_123", Amount = 100001.00m, Currency = "USD" };
+        var response = await client.PostAsJsonAsync("/loans", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
 
 public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleDto? RepaymentSchedule = null);
