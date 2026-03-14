@@ -31,28 +31,10 @@ else
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    builder.AddEventBus((x) =>
+    builder.AddEventBus(x =>
     {
-        x.AddConsumer<LoanApprovedConsumer>();
+        x.AddConsumer<LoanApprovedConsumer, LoanApprovedConsumerDefinition>();
         x.AddConsumer<FraudEvaluatedConsumer>();
-        x.UsingRabbitMq((context, cfg) =>
-        {
-            var rabbitMqConnectionString = builder.Configuration.GetConnectionString("messaging");
-            if (string.IsNullOrWhiteSpace(rabbitMqConnectionString))
-            {
-                throw new InvalidOperationException("RabbitMQ connection is not configured.");
-            }
-
-            ConfigureRabbitMqHost(cfg, rabbitMqConnectionString);
-            
-            cfg.ReceiveEndpoint("loan-approved", e =>
-            {
-                e.ConfigureConsumer<LoanApprovedConsumer>(context);
-                e.UseMessageRetry(r => r.Exponential(5, TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(500)));
-            });
-
-            cfg.ConfigureEndpoints(context);
-        });
 
         if (!string.IsNullOrEmpty(connectionString))
         {
@@ -102,34 +84,3 @@ app.MapGet("/routes", (IEnumerable<EndpointDataSource> endpointSources) =>
 await app.SafeMigrateAsync<PaymentDbContext>();
 
 app.Run();
-
-static void ConfigureRabbitMqHost(IRabbitMqBusFactoryConfigurator cfg, string connectionString)
-{
-    if (Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
-    {
-        var vhost = uri.AbsolutePath.Trim('/');
-        var host = uri.Host;
-        var port = (ushort)(uri.IsDefaultPort ? 5672 : uri.Port);
-
-        cfg.Host(host, port, string.IsNullOrWhiteSpace(vhost) ? "/" : vhost, h =>
-        {
-            if (!string.IsNullOrWhiteSpace(uri.UserInfo))
-            {
-                var parts = uri.UserInfo.Split(':', 2);
-                if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
-                {
-                    h.Username(Uri.UnescapeDataString(parts[0]));
-                }
-
-                if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]))
-                {
-                    h.Password(Uri.UnescapeDataString(parts[1]));
-                }
-            }
-        });
-
-        return;
-    }
-
-    cfg.Host(connectionString);
-}

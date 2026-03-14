@@ -26,7 +26,9 @@ public static class Extensions
     public static TBuilder AddDefaultAuthentication<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         var identitySection = builder.Configuration.GetSection("Identity");
-        
+
+        builder.Services.AddAuthorization();
+
         if (!identitySection.Exists())
         {
             return builder;
@@ -64,8 +66,6 @@ public static class Extensions
                 }
             });
 
-        builder.Services.AddAuthorization();
-        
         return builder;
     }
 
@@ -97,7 +97,12 @@ public static class Extensions
         return builder;
     }
 
-    public static TBuilder AddEventBus<TBuilder>(this TBuilder builder, Action<IBusRegistrationConfigurator>? configure = null) where TBuilder : IHostApplicationBuilder
+    public static TBuilder AddEventBus<TBuilder>(
+        this TBuilder builder,
+        Action<IBusRegistrationConfigurator>? configure = null,
+        Action<IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>? configureRabbitMq = null,
+        Action<IBusRegistrationContext, IInMemoryBusFactoryConfigurator>? configureInMemory = null
+    ) where TBuilder : IHostApplicationBuilder
     {
         builder.Services.AddMassTransit(x =>
         {
@@ -105,40 +110,57 @@ public static class Extensions
             
             configure?.Invoke(x);
 
-            // Default configuration if no transport is configured
-            if (!x.GetType().GetProperties().Any(p => p.Name == "BusConfigurator"))
+            var connectionString = builder.Configuration.GetConnectionString("messaging");
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                 var connectionString = builder.Configuration.GetConnectionString("messaging");
-
-                if (string.IsNullOrEmpty(connectionString))
+                x.UsingInMemory((context, cfg) =>
                 {
-                    x.UsingInMemory((context, cfg) =>
-                    {
-                        cfg.ConfigureEndpoints(context);
-                    });
-                }
-                else
-                {
-                    // This is the default if not overridden in 'configure'
-                    // However, we want to allow services to configure their own transport (like adding middleware)
-                    // So we only apply this if they haven't called UsingRabbitMq themselves.
-                    // But MassTransit doesn't easily expose "has transport been configured".
-                    // A common pattern is to let the service configure the transport.
-                    
-                    // For now, to keep backward compatibility with services that just call AddEventBus(),
-                    // we can check if the service provided a configuration action. 
-                    // But the services (Lending/Payment) are now calling UsingRabbitMq inside the action.
-                    // So we should REMOVE the default configuration here if it conflicts, OR
-                    // just rely on the service to configure it.
-                    
-                    // The previous edit REMOVED the default configuration. 
-                    // But wait, if I have other services (like WalletService) that relies on the default, I broke them.
-                    // Let's check WalletService.
-                }
+                    configureInMemory?.Invoke(context, cfg);
+                    cfg.ConfigureEndpoints(context);
+                });
+                return;
             }
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                ConfigureRabbitMqHost(cfg, connectionString);
+                configureRabbitMq?.Invoke(context, cfg);
+                cfg.ConfigureEndpoints(context);
+            });
         });
 
         return builder;
+    }
+
+    private static void ConfigureRabbitMqHost(IRabbitMqBusFactoryConfigurator cfg, string connectionString)
+    {
+        if (Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+        {
+            var vhost = uri.AbsolutePath.Trim('/');
+            var host = uri.Host;
+            var port = (ushort)(uri.IsDefaultPort ? 5672 : uri.Port);
+
+            cfg.Host(host, port, string.IsNullOrWhiteSpace(vhost) ? "/" : vhost, h =>
+            {
+                if (!string.IsNullOrWhiteSpace(uri.UserInfo))
+                {
+                    var parts = uri.UserInfo.Split(':', 2);
+                    if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
+                    {
+                        h.Username(Uri.UnescapeDataString(parts[0]));
+                    }
+
+                    if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]))
+                    {
+                        h.Password(Uri.UnescapeDataString(parts[1]));
+                    }
+                }
+            });
+
+            return;
+        }
+
+        cfg.Host(connectionString);
     }
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
