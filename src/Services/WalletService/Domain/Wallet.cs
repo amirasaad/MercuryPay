@@ -28,7 +28,7 @@ public class Wallet
     }
 
     // Required for EF Core
-    private Wallet() 
+    private Wallet()
     {
         UserId = default!;
         Currency = default!;
@@ -90,7 +90,7 @@ public class LedgerEntry
     }
 
     // Required for EF Core
-    private LedgerEntry() 
+    private LedgerEntry()
     {
         TransactionId = default!;
         Description = default!;
