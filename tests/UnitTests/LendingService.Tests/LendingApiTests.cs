@@ -440,6 +440,21 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         createResponse.EnsureSuccessStatusCode();
         var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
 
+        // Ensure loan is Approved before fraud event to avoid race with LoanCreated approval
+        LoanResponse? approvedLoan = null;
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "Approved")
+            {
+                approvedLoan = l;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.NotNull(approvedLoan);
+
         await harness.Start();
         try
         {
@@ -457,9 +472,20 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
             await harness.Stop();
         }
 
-        var getResponse = await client.GetAsync($"/loans/{loan!.Id}");
-        getResponse.EnsureSuccessStatusCode();
-        var updated = await getResponse.Content.ReadFromJsonAsync<LoanResponse>();
+        // Poll for FraudDetected status with retries
+        LoanResponse? updated = null;
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "FraudDetected")
+            {
+                updated = l;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.NotNull(updated);
         Assert.Equal("FraudDetected", updated!.Status);
         Assert.All(updated!.RepaymentSchedule!.Installments, i =>
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
@@ -530,6 +556,17 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var client = _factory.CreateClient();
         _ = client;
     }
+
+    /// <summary>
+    /// TEST-LEND-003 (Pending): disbursement triggers wallet credit and loan becomes Active.
+    /// </summary>
+    [Fact(Skip = "Pending REQ-LEND-003: implement disbursement and wallet credit")]
+    [Trait("TestId", "TEST-LEND-003")]
+    public async Task Disbursement_TriggersWalletCredit_And_ActivatesLoan()
+    {
+        var client = _factory.CreateClient();
+        _ = client;
+    }
 }
 
 public class TestDocIndex
@@ -587,6 +624,136 @@ public class TestDocIndex
         }
 
         Assert.True(items.Count > 0);
+    }
+}
+
+public class TraceabilityMatrixTests
+{
+    /// <summary>
+    /// Finds the repository root by walking up from the test base directory until Docs/Requirements.md is found.
+    /// </summary>
+    private static string FindRepoRootOrThrow()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        for (int i = 0; i < 12 && dir is not null; i++, dir = dir.Parent!)
+        {
+            var probe = Path.Combine(dir.FullName, "Docs", "Requirements.md");
+            if (File.Exists(probe))
+            {
+                return dir.FullName;
+            }
+        }
+        throw new FileNotFoundException("Could not locate Docs/Requirements.md by walking up directory tree.");
+    }
+
+    /// <summary>
+    /// Parses Docs/Requirements.md to extract Test Case IDs for REQ-LEND-*** from the Traceability Matrix.
+    /// </summary>
+    private static HashSet<string> GetLendTestIdsFromDocs()
+    {
+        var root = FindRepoRootOrThrow();
+        var path = Path.Combine(root, "Docs", "Requirements.md");
+        var md = File.ReadAllText(path);
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var sr = new StringReader(md);
+        string? line;
+        while ((line = sr.ReadLine()) is not null)
+        {
+            if (!line.Contains("**REQ-LEND-")) continue;
+            if (!line.Contains("|")) continue;
+            var parts = line.Split('|');
+            // Expected columns: [0] , [1]=ReqId, [2]=Desc, [3]=Priority, [4]=Design, [5]=TestId, [6]=Status, [7]
+            if (parts.Length >= 6)
+            {
+                var cell = parts[5].Trim();
+                if (cell.Length == 0) continue;
+                cell = cell.Trim('`').Trim();
+                if (cell.StartsWith("TEST-", StringComparison.OrdinalIgnoreCase))
+                {
+                    set.Add(cell);
+                }
+            }
+        }
+        return set;
+    }
+
+    /// <summary>
+    /// Collects all Trait("TestId", ...) values present in this test assembly.
+    /// </summary>
+    private static HashSet<string> GetTestIdsFromAssembly()
+    {
+        var asm = typeof(LendingApiTests).Assembly;
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var type in asm.GetTypes())
+        {
+            foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Any()
+                              || m.GetCustomAttributes(typeof(TheoryAttribute), true).Any();
+                if (!hasFact) continue;
+                foreach (var cad in m.CustomAttributes)
+                {
+                    if (cad.AttributeType == typeof(TraitAttribute) && cad.ConstructorArguments.Count == 2)
+                    {
+                        var name = cad.ConstructorArguments[0].Value as string;
+                        var value = cad.ConstructorArguments[1].Value as string;
+                        if (string.Equals(name, "TestId", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(value))
+                        {
+                            set.Add(value!);
+                        }
+                    }
+                }
+            }
+        }
+        return set;
+    }
+
+    /// <summary>
+    /// Collects all Trait("UAC", ...) values present in this test assembly.
+    /// </summary>
+    private static HashSet<string> GetUacIdsFromAssembly()
+    {
+        var asm = typeof(LendingApiTests).Assembly;
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var type in asm.GetTypes())
+        {
+            foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Any()
+                              || m.GetCustomAttributes(typeof(TheoryAttribute), true).Any();
+                if (!hasFact) continue;
+                foreach (var cad in m.CustomAttributes)
+                {
+                    if (cad.AttributeType == typeof(TraitAttribute) && cad.ConstructorArguments.Count == 2)
+                    {
+                        var name = cad.ConstructorArguments[0].Value as string;
+                        var value = cad.ConstructorArguments[1].Value as string;
+                        if (string.Equals(name, "UAC", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(value))
+                        {
+                            set.Add(value!);
+                        }
+                    }
+                }
+            }
+        }
+        return set;
+    }
+
+    /// <summary>
+    /// Validates that every REQ-LEND-*** Test Case ID listed in Docs/Requirements.md has a corresponding Trait("TestId") in the tests.
+    /// Also asserts that UAC-LEND-01 is present as a Trait("UAC").
+    /// Fails with a descriptive message if any mappings are missing.
+    /// </summary>
+    [Fact]
+    public void Traceability_Matrix_Lending_TestIds_AreCovered()
+    {
+        var docsIds = GetLendTestIdsFromDocs();
+        var asmIds = GetTestIdsFromAssembly();
+        var missing = docsIds.Except(asmIds, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.True(missing.Count == 0, $"Missing tests for TestIds in Docs/Requirements.md (Lending): {string.Join(", ", missing)}");
+
+        var uacIds = GetUacIdsFromAssembly();
+        Assert.Contains("UAC-LEND-01", uacIds);
     }
 }
 
