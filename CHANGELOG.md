@@ -8,6 +8,36 @@
 <a name="1.6.0"></a>
 <a name="1.7.0"></a>
 <a name="1.8.0"></a>
+<a name="1.9.0"></a>
+# [1.9.0](https://github.com/amirasaad/MercuryPay/compare/v1.8.0...v1.9.0) (2026-03-14)
+
+
+### ✅ Tests
+
+* **acceptance:** FraudEvaluated cancels installments; API shows Cancelled ([6837ae8](https://github.com/amirasaad/MercuryPay/commit/6837ae8))
+* **lending-acceptance:** add skipped REQ-LEND-004..007 scenarios ([a0d7401](https://github.com/amirasaad/MercuryPay/commit/a0d7401))
+* **lending-docs:** add traceability validator and TEST-LEND-003 placeholder ([9248d69](https://github.com/amirasaad/MercuryPay/commit/9248d69))
+* **lending-docs:** add Trait-based TestId/UAC and doc index test ([5141f0e](https://github.com/amirasaad/MercuryPay/commit/5141f0e))
+* **lending:** annotate tests with IDs; deflake fraud-cancel test ([bb5608e](https://github.com/amirasaad/MercuryPay/commit/bb5608e))
+* **spec:** add SpecIndex covering fraud-cancel & max-amount scenarios ([37d1910](https://github.com/amirasaad/MercuryPay/commit/37d1910))
+
+
+### ✨ Features
+
+* **lending:** cancel pending installments on fraud; enforce max amount ([fdfa1df](https://github.com/amirasaad/MercuryPay/commit/fdfa1df))
+* **lending:** publish LoanFraudDetected and update fraud consumer ([cb1163f](https://github.com/amirasaad/MercuryPay/commit/cb1163f))
+
+
+### 🐛 Bug Fixes
+
+* **lending-api:** return 400 for amount > max; add API test ([744a28f](https://github.com/amirasaad/MercuryPay/commit/744a28f))
+
+
+### 📝 Documentation
+
+* **lending:** add REQ-LEND-008 and UAC-LEND-01 to align with tests ([5b1b088](https://github.com/amirasaad/MercuryPay/commit/5b1b088))
+* **traceability:** add REQ-LEND-008 mapping to TEST-LEND-008 (Implemented) ([80a7ff8](https://github.com/amirasaad/MercuryPay/commit/80a7ff8))
+
 # [1.8.0](https://github.com/amirasaad/MercuryPay/compare/v1.7.0...v1.8.0) (2026-03-14)
 
 
