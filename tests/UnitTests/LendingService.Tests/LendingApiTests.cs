@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Reflection;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.AspNetCore.Hosting;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 using MercuryPay.LendingService.Domain;
 using MercuryPay.LendingService.Infrastructure;
 using MercuryPay.LendingService.Consumers;
@@ -77,6 +79,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-002 (supporting behavior): Partial repayment updates first installment status/amount.
     /// </summary>
     [Fact]
+    [Trait("TestId", "TEST-LEND-002")]
     public async Task RepayLoan_PartiallyUpdatesInstallmentStatus()
     {
         // Arrange
@@ -186,6 +189,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     [Fact]
+    [Trait("TestId", "TEST-LEND-001")]
     public async Task CreateLoan_ReturnsCreated_WhenRequestIsValid()
     {
         // Arrange
@@ -215,6 +219,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-004: amount must be > 0 — negative amount returns 400 Bad Request.
     /// </summary>
     [Fact]
+    [Trait("TestId", "TEST-LEND-004")]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsNegative()
     {
         // Arrange
@@ -234,6 +239,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     [Fact]
+    [Trait("UAC", "UAC-LEND-01")]
     public async Task GetLoan_ForFraudDetectedLoan_ShowsCancelledInstallments()
     {
         var client = _factory.CreateClient();
@@ -298,6 +304,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// <summary>
     /// TEST-LEND-008: Enforce configurable maximum loan amount — exceeds max returns 400.
     /// </summary>
+    [Trait("TestId", "TEST-LEND-008")]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountExceedsMaximum()
     {
         var client = _factory.CreateClient();
@@ -362,6 +369,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// <summary>
     /// Supporting repayment flow: Accepts repayment request for approved loan.
     /// </summary>
+    [Trait("Category", "Support")]
     public async Task RepayLoan_ReturnsAccepted_WhenLoanExists()
     {
         // Arrange
@@ -401,6 +409,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// Includes: UAC-LEND-01 and TEST-LEND-008.
     /// </summary>
     [Theory]
+    [Trait("Index", "SpecIndex-LEND")]
     [InlineData("AC-LEND-FRAUD-CANCEL")]
     [InlineData("AC-LEND-AMOUNT-MAX-400")]
     public async Task SpecIndex_CoversDocumentedAcceptanceScenarios(string scenario)
@@ -471,6 +480,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-004 (Pending): amount == 0 returns 400 Bad Request.
     /// </summary>
     [Fact(Skip = "Pending REQ-LEND-004: enforce amount > 0")]
+    [Trait("TestId", "TEST-LEND-004")]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsZero()
     {
         var client = _factory.CreateClient();
@@ -483,6 +493,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-004 (Pending): invalid ISO 4217 currency returns 400 Bad Request.
     /// </summary>
     [Fact(Skip = "Pending REQ-LEND-004: validate ISO 4217 currency")]
+    [Trait("TestId", "TEST-LEND-004")]
     public async Task CreateLoan_ReturnsBadRequest_WhenCurrencyCodeIsInvalid()
     {
         var client = _factory.CreateClient();
@@ -495,6 +506,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-005 (Pending): loan status is a strongly-typed domain value.
     /// </summary>
     [Fact(Skip = "Pending REQ-LEND-005: strongly-typed loan status")]
+    [Trait("TestId", "TEST-LEND-005")]
     public void LoanStatus_IsStronglyTyped_InDomain()
     {
     }
@@ -503,6 +515,7 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-006 (Pending): Installment public setters restricted to hydration-only.
     /// </summary>
     [Fact(Skip = "Pending REQ-LEND-006: restrict Installment public mutability")]
+    [Trait("TestId", "TEST-LEND-006")]
     public void Installment_PublicSetters_AreRestricted()
     {
     }
@@ -511,10 +524,69 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     /// TEST-LEND-INT-001 (Pending): publish RepaymentProcessed/RepaymentFailed outcome events.
     /// </summary>
     [Fact(Skip = "Pending REQ-LEND-007: publish repayment outcome events")]
+    [Trait("TestId", "TEST-LEND-INT-001")]
     public async Task RepaymentOutcome_PublishesEvents()
     {
         var client = _factory.CreateClient();
         _ = client;
+    }
+}
+
+public class TestDocIndex
+{
+    private readonly ITestOutputHelper _output;
+
+    /// <summary>
+    /// Emits a sorted list of TestIds and UACs present in this test assembly for documentation sync.
+    /// </summary>
+    public TestDocIndex(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
+    /// <summary>
+    /// Index test: enumerates [Fact]/[Theory] methods and prints Trait("TestId"/"UAC").
+    /// </summary>
+    [Fact]
+    public void TestIds_Index_ProducesList()
+    {
+        var asm = typeof(LendingApiTests).Assembly;
+        var items = new List<(string id, string fqn)>();
+        foreach (var type in asm.GetTypes())
+        {
+            foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var hasFact = m.GetCustomAttributes(typeof(FactAttribute), true).Any()
+                              || m.GetCustomAttributes(typeof(TheoryAttribute), true).Any();
+                if (!hasFact) continue;
+
+                foreach (var cad in m.CustomAttributes)
+                {
+                    if (cad.AttributeType == typeof(TraitAttribute) && cad.ConstructorArguments.Count == 2)
+                    {
+                        var name = cad.ConstructorArguments[0].Value as string;
+                        var value = cad.ConstructorArguments[1].Value as string;
+                        if (string.Equals(name, "TestId", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(name, "UAC", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var fqn = $"{type.FullName}.{m.Name}";
+                            if (!string.IsNullOrWhiteSpace(value))
+                            {
+                                items.Add((value!, fqn));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        items.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+        foreach (var item in items)
+        {
+            _output.WriteLine($"{item.id} -> {item.fqn}");
+        }
+
+        Assert.True(items.Count > 0);
     }
 }
 
