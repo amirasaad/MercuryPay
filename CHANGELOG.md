@@ -7,6 +7,51 @@
 <a name="1.5.0"></a>
 <a name="1.6.0"></a>
 <a name="1.7.0"></a>
+<a name="1.8.0"></a>
+# [1.8.0](https://github.com/amirasaad/MercuryPay/compare/v1.7.0...v1.8.0) (2026-03-14)
+
+
+### ♻️ Code Refactoring
+
+* **wallet:** remove RowVersion; rely on xmin concurrency ([7342a8c](https://github.com/amirasaad/MercuryPay/commit/7342a8c))
+* **wallet:** replace RowVersion with xmin for concurrency control ([8c5322c](https://github.com/amirasaad/MercuryPay/commit/8c5322c))
+* **wallet:** streamline wallet service ([9e9d1d7](https://github.com/amirasaad/MercuryPay/commit/9e9d1d7))
+
+
+### ✅ Tests
+
+* adjust WalletApiTests user and tidy workflow/invalidation tests ([98e8d79](https://github.com/amirasaad/MercuryPay/commit/98e8d79))
+* **wallet:** fix failing unit tests after ownership enforcement ([1b39cac](https://github.com/amirasaad/MercuryPay/commit/1b39cac))
+
+
+### ✨ Features
+
+* **wallet:** harden WalletService integrity and access controls ([9b73cc8](https://github.com/amirasaad/MercuryPay/commit/9b73cc8))
+
+
+### 🐛 Bug Fixes
+
+* **lending:** eager-load RepaymentSchedule in loan queries ([2ed17aa](https://github.com/amirasaad/MercuryPay/commit/2ed17aa))
+
+
+### 💚 Continuous Integration
+
+* add cache-dependency-path to setup-dotnet for lock file discovery ([288168a](https://github.com/amirasaad/MercuryPay/commit/288168a))
+* add NuGet lock files and enforce locked-mode restore ([ae85750](https://github.com/amirasaad/MercuryPay/commit/ae85750))
+* remove --locked-mode to fix framework package version mismatch ([6f8d20f](https://github.com/amirasaad/MercuryPay/commit/6f8d20f))
+
+
+### 📝 Documentation
+
+* update requirements with review findings and add findings/issue tracking backlog ([64f99f3](https://github.com/amirasaad/MercuryPay/commit/64f99f3))
+* update WalletService, Security, and Technical-Notes docs for hardening changes ([eb0e4e2](https://github.com/amirasaad/MercuryPay/commit/eb0e4e2))
+
+
+### 🔨 Chores
+
+* add Finance TDD Expert agent for financial correctness and TDD discipline ([560bbf9](https://github.com/amirasaad/MercuryPay/commit/560bbf9))
+* **db:** add WalletService EfCore10ModelSync migration ([af04dfe](https://github.com/amirasaad/MercuryPay/commit/af04dfe))
+
 # [1.7.0](https://github.com/amirasaad/MercuryPay/compare/v1.6.0...v1.7.0) (2026-03-12)
 
 
