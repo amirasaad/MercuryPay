@@ -418,6 +418,41 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var response = await client.PostAsJsonAsync("/loans", request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact(Skip = "Pending REQ-LEND-004: enforce amount > 0")]
+    public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsZero()
+    {
+        var client = _factory.CreateClient();
+        var request = new { UserId = "user_123", Amount = 0.00m, Currency = "USD" };
+        var response = await client.PostAsJsonAsync("/loans", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact(Skip = "Pending REQ-LEND-004: validate ISO 4217 currency")]
+    public async Task CreateLoan_ReturnsBadRequest_WhenCurrencyCodeIsInvalid()
+    {
+        var client = _factory.CreateClient();
+        var request = new { UserId = "user_123", Amount = 100.00m, Currency = "ZZZ" };
+        var response = await client.PostAsJsonAsync("/loans", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact(Skip = "Pending REQ-LEND-005: strongly-typed loan status")]
+    public void LoanStatus_IsStronglyTyped_InDomain()
+    {
+    }
+
+    [Fact(Skip = "Pending REQ-LEND-006: restrict Installment public mutability")]
+    public void Installment_PublicSetters_AreRestricted()
+    {
+    }
+
+    [Fact(Skip = "Pending REQ-LEND-007: publish repayment outcome events")]
+    public async Task RepaymentOutcome_PublishesEvents()
+    {
+        var client = _factory.CreateClient();
+        _ = client;
+    }
 }
 
 public record LoanResponse(Guid Id, string UserId, decimal Amount, string Currency, string Status, DateTime CreatedAt, int TermMonths, decimal AnnualInterestRate, RepaymentScheduleDto? RepaymentSchedule = null);
