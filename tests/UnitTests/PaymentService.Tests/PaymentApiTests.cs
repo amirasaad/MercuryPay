@@ -50,6 +50,20 @@ public class PaymentApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task CreatePayment_RequiresAuthentication()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var request = new PaymentRequest(100.00m, "USD", "user_123", "merchant_456", null);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/payments", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreatePayment_ReturnsCreated_WhenRequestIsValid()
     {
         // Arrange
@@ -130,6 +144,11 @@ public class PaymentApiTests : IClassFixture<WebApplicationFactory<Program>>
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            if (!Request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization.ToString()))
+            {
+                return Task.FromResult(AuthenticateResult.NoResult());
+            }
+
             var claims = new[] { 
                 new Claim(ClaimTypes.Name, "TestUser"), 
                 new Claim(ClaimTypes.NameIdentifier, "user_123") 
