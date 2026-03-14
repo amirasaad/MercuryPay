@@ -73,6 +73,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
             });
         });
 
+    /// <summary>
+    /// TEST-LEND-002 (supporting behavior): Partial repayment updates first installment status/amount.
+    /// </summary>
     [Fact]
     public async Task RepayLoan_PartiallyUpdatesInstallmentStatus()
     {
@@ -208,6 +211,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.Equal(0.05m, loan.AnnualInterestRate); // Default
     }
 
+    /// <summary>
+    /// TEST-LEND-004: amount must be > 0 — negative amount returns 400 Bad Request.
+    /// </summary>
     [Fact]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsNegative()
     {
@@ -233,15 +239,30 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         var client = _factory.CreateClient();
         var harness = _factory.Services.GetRequiredService<ITestHarness>();
 
-        var createRequest = new { UserId = "user_123", Amount = 2000.00m, Currency = "USD" };
+        var createRequest = new { UserId = "user_123", Amount = 2500.00m, Currency = "USD" };
         var createResponse = await client.PostAsJsonAsync("/loans", createRequest);
         createResponse.EnsureSuccessStatusCode();
         var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
 
+        // Ensure loan is Approved before fraud event to avoid race with LoanCreated approval
+        LoanResponse? approvedLoan = null;
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "Approved")
+            {
+                approvedLoan = l;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.NotNull(approvedLoan);
+
         await harness.Start();
         try
         {
-            await harness.Bus.Publish(new FraudEvaluated(Guid.NewGuid(), false, 99, "Fraud", DateTimeOffset.UtcNow, loan!.Id));
+            await harness.Bus.Publish(new FraudEvaluated(Guid.NewGuid(), false, 97, "High risk", DateTimeOffset.UtcNow, loan!.Id));
             var consumed = false;
             for (int i = 0; i < 30; i++)
             {
@@ -255,14 +276,28 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
             await harness.Stop();
         }
 
-        var getResponse = await client.GetAsync($"/loans/{loan!.Id}");
-        getResponse.EnsureSuccessStatusCode();
-        var updated = await getResponse.Content.ReadFromJsonAsync<LoanResponse>();
+        // Poll for FraudDetected status with retries
+        LoanResponse? updated = null;
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "FraudDetected")
+            {
+                updated = l;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.NotNull(updated);
         Assert.Equal("FraudDetected", updated!.Status);
         Assert.All(updated!.RepaymentSchedule!.Installments, i =>
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
     }
     [Fact]
+    /// <summary>
+    /// TEST-LEND-008: Enforce configurable maximum loan amount — exceeds max returns 400.
+    /// </summary>
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountExceedsMaximum()
     {
         var client = _factory.CreateClient();
@@ -324,6 +359,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.All(loans, l => Assert.Equal(userId, l.UserId));
     }
     [Fact]
+    /// <summary>
+    /// Supporting repayment flow: Accepts repayment request for approved loan.
+    /// </summary>
     public async Task RepayLoan_ReturnsAccepted_WhenLoanExists()
     {
         // Arrange
@@ -358,6 +396,10 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
     
+    /// <summary>
+    /// SpecIndex — executable acceptance coverage index for documented Lending scenarios.
+    /// Includes: UAC-LEND-01 and TEST-LEND-008.
+    /// </summary>
     [Theory]
     [InlineData("AC-LEND-FRAUD-CANCEL")]
     [InlineData("AC-LEND-AMOUNT-MAX-400")]
@@ -376,6 +418,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         }
     }
 
+    /// <summary>
+    /// UAC-LEND-01: Fraud cancellation — loan becomes FraudDetected and unpaid installments are Cancelled.
+    /// </summary>
     private async Task Scenario_FraudDetected_CancelsPendingInstallments()
     {
         var client = _factory.CreateClient();
@@ -411,6 +456,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
     }
 
+    /// <summary>
+    /// TEST-LEND-008: Enforce maximum loan amount (helper scenario).
+    /// </summary>
     private async Task Scenario_CreateLoan_AmountExceedsMax_ReturnsBadRequest()
     {
         var client = _factory.CreateClient();
@@ -419,6 +467,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// TEST-LEND-004 (Pending): amount == 0 returns 400 Bad Request.
+    /// </summary>
     [Fact(Skip = "Pending REQ-LEND-004: enforce amount > 0")]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsZero()
     {
@@ -428,6 +479,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// TEST-LEND-004 (Pending): invalid ISO 4217 currency returns 400 Bad Request.
+    /// </summary>
     [Fact(Skip = "Pending REQ-LEND-004: validate ISO 4217 currency")]
     public async Task CreateLoan_ReturnsBadRequest_WhenCurrencyCodeIsInvalid()
     {
@@ -437,16 +491,25 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// TEST-LEND-005 (Pending): loan status is a strongly-typed domain value.
+    /// </summary>
     [Fact(Skip = "Pending REQ-LEND-005: strongly-typed loan status")]
     public void LoanStatus_IsStronglyTyped_InDomain()
     {
     }
 
+    /// <summary>
+    /// TEST-LEND-006 (Pending): Installment public setters restricted to hydration-only.
+    /// </summary>
     [Fact(Skip = "Pending REQ-LEND-006: restrict Installment public mutability")]
     public void Installment_PublicSetters_AreRestricted()
     {
     }
 
+    /// <summary>
+    /// TEST-LEND-INT-001 (Pending): publish RepaymentProcessed/RepaymentFailed outcome events.
+    /// </summary>
     [Fact(Skip = "Pending REQ-LEND-007: publish repayment outcome events")]
     public async Task RepaymentOutcome_PublishesEvents()
     {
