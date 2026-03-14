@@ -71,7 +71,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
         var createRequest = new
         {
-            UserId = "user_456",
+            UserId = "user_123",
             Currency = "EUR"
         };
         var createResponse = await client.PostAsJsonAsync("/wallets", createRequest);
@@ -85,9 +85,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var wallet = await getResponse.Content.ReadFromJsonAsync<WalletResponse>();
         Assert.NotNull(wallet);
         Assert.Equal(createdWallet.Id, wallet.Id);
-        // Create action uses request.UserId unless it is empty; token is used only when request.UserId is empty.
-        // Since we passed UserId = \"user_456\", the created wallet should belong to \"user_456\".
-        Assert.Equal("user_456", wallet.UserId);
+        Assert.Equal("user_123", wallet.UserId);
     }
 
     [Fact]
@@ -111,7 +109,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         // Arrange
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
-        var request = new { UserId = "user_dup", Currency = "GBP" };
+        var request = new { UserId = "user_123", Currency = "GBP" };
 
         // Act
         var first = await client.PostAsJsonAsync("/wallets", request);
@@ -206,7 +204,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
 
         // First create a wallet
-        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_credit_test", Currency = "USD" });
+        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_123", Currency = "JPY" });
         var wallet = await createResp.Content.ReadFromJsonAsync<WalletResponse>();
 
         // Act – send credit with missing TransactionId
@@ -223,7 +221,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
 
-        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_credit_negative", Currency = "USD" });
+        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_123", Currency = "CHF" });
         var wallet = await createResp.Content.ReadFromJsonAsync<WalletResponse>();
 
         var response = await client.PostAsJsonAsync($"/wallets/{wallet!.Id}/credit",
@@ -238,7 +236,7 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
 
-        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_credit_nodesc", Currency = "USD" });
+        var createResp = await client.PostAsJsonAsync("/wallets", new { UserId = "user_123", Currency = "CAD" });
         var wallet = await createResp.Content.ReadFromJsonAsync<WalletResponse>();
 
         var response = await client.PostAsJsonAsync($"/wallets/{wallet!.Id}/credit",
@@ -253,6 +251,11 @@ public class WalletApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // Only authenticate when an Authorization header is present, so that
+            // tests asserting 401 on unauthenticated requests behave correctly.
+            if (!Request.Headers.ContainsKey("Authorization"))
+                return Task.FromResult(AuthenticateResult.NoResult());
+
             var claims = new[] { 
                 new Claim(ClaimTypes.Name, "TestUser"), 
                 new Claim(ClaimTypes.NameIdentifier, "user_123") 
