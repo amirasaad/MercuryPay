@@ -234,13 +234,13 @@ public static class Extensions
         // if (app.Environment.IsDevelopment())
         {
             // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
+            app.MapHealthChecks(HealthEndpointPath).AllowAnonymous();
 
             // Only health checks tagged with the "live" tag must pass for app to be considered alive
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
-            });
+            }).AllowAnonymous();
         }
         
         // Add dev auth bypass middleware if in development with auth disabled
@@ -266,7 +266,7 @@ public class DevAuthBypassMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context)
     {
         // If no auth header is present, create a default identity for development
-        if (!context.Request.Headers.Authorization.Any())
+        if (context.Request.Headers.Authorization.Count == 0)
         {
             var claims = new[]
             {
