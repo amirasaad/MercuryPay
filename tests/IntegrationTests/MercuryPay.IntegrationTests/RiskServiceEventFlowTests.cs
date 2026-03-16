@@ -1,10 +1,11 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http.Headers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,6 +21,60 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
     private const int EventProcessingDelayMs = 2000;
     private const int MaxRetries = 5;
     private const int RetryDelayMs = 500;
+
+    /// <summary>
+    /// Creates a lightweight unsigned JWT for Development when Identity__DisableAuthValidation=true.
+    /// </summary>
+    private static string CreateDevJwt(string subject)
+    {
+        static string B64Url(string json)
+        {
+            var bytes = Encoding.UTF8.GetBytes(json);
+            return Convert.ToBase64String(bytes)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+        }
+
+        var header = B64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");
+        var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
+        return $"{header}.{payload}.";
+    }
+
+    /// <summary>
+    /// Retries POST requests during cold-start until a success response or timeout.
+    /// </summary>
+    private static async Task<HttpResponseMessage> PostWithRetriesAsync(HttpClient client, string uri, object body, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+        HttpResponseMessage? lastResponse = null;
+        string? lastException = null;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                lastResponse = await client.PostAsJsonAsync(uri, body);
+                if (lastResponse.IsSuccessStatusCode)
+                {
+                    return lastResponse;
+                }
+            }
+            catch (Exception ex)
+            {
+                lastException = ex.Message;
+            }
+
+            await Task.Delay(1000);
+        }
+
+        if (lastResponse != null)
+        {
+            return lastResponse;
+        }
+
+        throw new TimeoutException($"POST {uri} did not succeed within {timeout}. Last Exception: {lastException}");
+    }
 
     [Fact]
     public async Task EventFlow_SmallPayment_ShouldBeApprovedAndPublishEvent()
@@ -44,7 +99,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
-        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_alice"));
 
         // Act: Create a low-value payment (should be approved)
         var newPaymentRequest = new
@@ -55,7 +110,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
             currency = "USD"
         };
 
-        var createResponse = await paymentClient.PostAsJsonAsync("/Payments", newPaymentRequest);
+        var createResponse = await PostWithRetriesAsync(paymentClient, "/Payments", newPaymentRequest, TimeSpan.FromMinutes(4));
         createResponse.EnsureSuccessStatusCode();
 
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
@@ -91,7 +146,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
-        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_charlie"));
 
         // Act: Create a high-value payment
         var highValueRequest = new
@@ -102,7 +157,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
             currency = "USD"
         };
 
-        var createResponse = await paymentClient.PostAsJsonAsync("/Payments", highValueRequest);
+        var createResponse = await PostWithRetriesAsync(paymentClient, "/Payments", highValueRequest, TimeSpan.FromMinutes(4));
         createResponse.EnsureSuccessStatusCode();
 
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
@@ -137,6 +192,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("suspicious_actor_123"));
 
         // Act: Create payment from suspicious user
         var suspiciousRequest = new
@@ -147,7 +203,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
             currency = "USD"
         };
 
-        var createResponse = await paymentClient.PostAsJsonAsync("/Payments", suspiciousRequest);
+        var createResponse = await PostWithRetriesAsync(paymentClient, "/Payments", suspiciousRequest, TimeSpan.FromMinutes(4));
         createResponse.EnsureSuccessStatusCode();
 
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
@@ -183,8 +239,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
         var riskClient = app.CreateHttpClient("riskservice", "http");
-        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
-        riskClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_frank"));
 
         // Create a payment
         var paymentRequest = new
@@ -195,7 +250,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
             currency = "USD"
         };
 
-        var createResponse = await paymentClient.PostAsJsonAsync("/Payments", paymentRequest);
+        var createResponse = await PostWithRetriesAsync(paymentClient, "/Payments", paymentRequest, TimeSpan.FromMinutes(4));
         createResponse.EnsureSuccessStatusCode();
 
         var createdPayment = await createResponse.Content.ReadFromJsonAsync<PaymentDto>();
@@ -237,8 +292,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
 
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
         var riskClient = app.CreateHttpClient("riskservice", "http");
-        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
-        riskClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
+        paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_batch_0"));
 
         // Create multiple payments to populate risk assessments
         for (int i = 0; i < 3; i++)
@@ -251,7 +305,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
                 currency = "USD"
             };
 
-            var response = await paymentClient.PostAsJsonAsync("/Payments", request);
+            var response = await PostWithRetriesAsync(paymentClient, "/Payments", request, TimeSpan.FromMinutes(4));
             response.EnsureSuccessStatusCode();
         }
 

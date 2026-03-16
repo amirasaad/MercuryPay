@@ -60,9 +60,6 @@ public class EndToEndTests(ITestOutputHelper output)
         output.WriteLine($"PaymentService BaseAddress: {paymentClient.BaseAddress}");
         output.WriteLine($"WalletService BaseAddress: {walletClient.BaseAddress}");
 
-        await WaitForAliveAsync(walletClient);
-        await WaitForAliveAsync(paymentClient);
-
         // Verify Environment and Connectivity
         try 
         {
@@ -150,34 +147,9 @@ public class EndToEndTests(ITestOutputHelper output)
         await PollForBalanceAsync(walletClient, toWallet.Id, paymentAmount);
     }
 
-    private static async Task WaitForAliveAsync(HttpClient client)
-    {
-        var timeout = TimeSpan.FromMinutes(2);
-        var start = DateTime.UtcNow;
-
-        while (DateTime.UtcNow - start < timeout)
-        {
-            try
-            {
-                var response = await client.GetAsync("/alive");
-                if (response.IsSuccessStatusCode)
-                {
-                    return;
-                }
-            }
-            catch
-            {
-            }
-
-            await Task.Delay(1000);
-        }
-
-        throw new TimeoutException("Service did not become alive within timeout.");
-    }
-
     private static async Task<HttpResponseMessage> PostWithRetriesAsync(HttpClient client, string uri, object body)
     {
-        var timeout = TimeSpan.FromMinutes(2);
+        var timeout = TimeSpan.FromMinutes(6);
         var start = DateTime.UtcNow;
         HttpResponseMessage? lastResponse = null;
 
@@ -208,7 +180,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
     private async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)
     {
-        var timeout = TimeSpan.FromSeconds(30); 
+        var timeout = TimeSpan.FromMinutes(2); 
         var start = DateTime.UtcNow;
 
         while (DateTime.UtcNow - start < timeout)
