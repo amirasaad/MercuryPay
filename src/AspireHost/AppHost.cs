@@ -29,7 +29,8 @@ var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("pay
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:5000");
 
 var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
     .WithReference(walletDb)
@@ -37,7 +38,8 @@ var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walle
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:5001");
 
 var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
     .WithReference(lendingDb)
@@ -46,7 +48,8 @@ var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("len
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:5002");
 
 var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
     .WithReference(riskDb)
@@ -54,7 +57,8 @@ var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservi
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:5003");
 
 builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
     .WithReference(paymentService)
