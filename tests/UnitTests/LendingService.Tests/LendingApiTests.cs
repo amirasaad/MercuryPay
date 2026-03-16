@@ -630,29 +630,29 @@ public class TestDocIndex
 public class TraceabilityMatrixTests
 {
     /// <summary>
-    /// Finds the repository root by walking up from the test base directory until Docs/Requirements.md is found.
+    /// Finds the repository root by walking up from the test base directory until docs/Requirements.md is found.
     /// </summary>
     private static string FindRepoRootOrThrow()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         for (int i = 0; i < 12 && dir is not null; i++, dir = dir.Parent!)
         {
-            var probe = Path.Combine(dir.FullName, "Docs", "Requirements.md");
+            var probe = Path.Combine(dir.FullName, "docs", "Requirements.md");
             if (File.Exists(probe))
             {
                 return dir.FullName;
             }
         }
-        throw new FileNotFoundException("Could not locate Docs/Requirements.md by walking up directory tree.");
+        throw new FileNotFoundException("Could not locate docs/Requirements.md by walking up directory tree.");
     }
 
     /// <summary>
-    /// Parses Docs/Requirements.md to extract Test Case IDs for REQ-LEND-*** from the Traceability Matrix.
+    /// Parses docs/Requirements.md to extract Test Case IDs for REQ-LEND-*** from the Traceability Matrix.
     /// </summary>
     private static HashSet<string> GetLendTestIdsFromDocs()
     {
         var root = FindRepoRootOrThrow();
-        var path = Path.Combine(root, "Docs", "Requirements.md");
+        var path = Path.Combine(root, "docs", "Requirements.md");
         var md = File.ReadAllText(path);
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var sr = new StringReader(md);
