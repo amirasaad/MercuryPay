@@ -33,8 +33,10 @@ public static class DatabaseExtensions
             var strategy = context.Database.CreateExecutionStrategy();
 
             // Outer retry loop for database connectivity/readiness
-            int maxRetries = 30;
-            int delaySeconds = 5;
+            var environment = services.GetRequiredService<IHostEnvironment>();
+            var isFastFailEnv = environment.IsDevelopment() || environment.IsEnvironment("Testing");
+            var maxRetries = isFastFailEnv ? 12 : 30;
+            var delaySeconds = isFastFailEnv ? 2 : 5;
             
             for (int i = 0; i < maxRetries; i++)
             {
