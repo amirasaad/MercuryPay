@@ -4,7 +4,7 @@
 **Author:** AI (based on comprehensive code review)
 **Version:** 1.0.0
 
-> This document tracks the major findings from the March 2026 code review of the MercuryPay repository and provides a prioritized backlog of follow-up work. For traceability to specific requirements, see [`Docs/Requirements.md`](Requirements.md).
+> This document tracks the major findings from the March 2026 code review of the MercuryPay repository and provides a prioritized backlog of follow-up work. For traceability to specific requirements, see [`docs/Requirements.md`](Requirements.md).
 
 ---
 
@@ -54,12 +54,12 @@ Issues are grouped by priority tier. Within each tier they are ordered by impact
 **Description:**
 - README describes Redis Streams as the event transport; actual implementation uses RabbitMQ via MassTransit.
 - README project structure diagram lists `MercuryPay.AppHost`, `MercuryPay.PaymentService` etc., but actual `src/` contains `ApiGateway`, `AspireHost`, `BuildingBlocks`, `Services`, `Web`.
-- Both `Docs/` and `docs/` directories exist, which is a case-sensitivity footgun on Linux CI.
+- Both `docs/` and `docs/` directories exist, which is a case-sensitivity footgun on Linux CI.
 
 **Acceptance criteria:**
 - README accurately describes the actual source tree and runtime transport.
 - No conflicting transport or security claims remain.
-- `Docs/` and `docs/` are consolidated into one directory.
+- `docs/` and `docs/` are consolidated into one directory.
 
 ---
 
@@ -257,9 +257,9 @@ Issues are grouped by priority tier. Within each tier they are ordered by impact
 
 ## 5. Related Documents
 
-- [`Docs/Requirements.md`](Requirements.md) — Full requirements specification with updated status and traceability matrix.
-- [`Docs/Security-Design.md`](Security-Design.md) — Security design and controls.
-- [`Docs/WalletService-Design.md`](WalletService-Design.md) — WalletService detailed design.
-- [`Docs/PaymentService-Design.md`](PaymentService-Design.md) — PaymentService detailed design.
-- [`Docs/LendingService-Design.md`](LendingService-Design.md) — LendingService detailed design.
-- [`Docs/Requirements-Analysis-Report.md`](Requirements-Analysis-Report.md) — Prior gap analysis and recommendations.
+- [`docs/Requirements.md`](Requirements.md) — Full requirements specification with updated status and traceability matrix.
+- [`docs/Security-Design.md`](Security-Design.md) — Security design and controls.
+- [`docs/WalletService-Design.md`](WalletService-Design.md) — WalletService detailed design.
+- [`docs/PaymentService-Design.md`](PaymentService-Design.md) — PaymentService detailed design.
+- [`docs/LendingService-Design.md`](LendingService-Design.md) — LendingService detailed design.
+- [`docs/Requirements-Analysis-Report.md`](Requirements-Analysis-Report.md) — Prior gap analysis and recommendations.

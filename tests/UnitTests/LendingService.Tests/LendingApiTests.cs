@@ -740,7 +740,7 @@ public class TraceabilityMatrixTests
     }
 
     /// <summary>
-    /// Validates that every REQ-LEND-*** Test Case ID listed in Docs/Requirements.md has a corresponding Trait("TestId") in the tests.
+    /// Validates that every REQ-LEND-*** Test Case ID listed in docs/Requirements.md has a corresponding Trait("TestId") in the tests.
     /// Also asserts that UAC-LEND-01 is present as a Trait("UAC").
     /// Fails with a descriptive message if any mappings are missing.
     /// </summary>
@@ -750,7 +750,7 @@ public class TraceabilityMatrixTests
         var docsIds = GetLendTestIdsFromDocs();
         var asmIds = GetTestIdsFromAssembly();
         var missing = docsIds.Except(asmIds, StringComparer.OrdinalIgnoreCase).ToList();
-        Assert.True(missing.Count == 0, $"Missing tests for TestIds in Docs/Requirements.md (Lending): {string.Join(", ", missing)}");
+        Assert.True(missing.Count == 0, $"Missing tests for TestIds in docs/Requirements.md (Lending): {string.Join(", ", missing)}");
 
         var uacIds = GetUacIdsFromAssembly();
         Assert.Contains("UAC-LEND-01", uacIds);
