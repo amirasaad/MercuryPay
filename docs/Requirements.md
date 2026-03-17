@@ -15,7 +15,7 @@
 
 MercuryPay is an intelligent financial orchestration platform designed to handle payments, wallets, lending, and risk assessment using a microservices architecture orchestrated by .NET Aspire. This document outlines the functional and non-functional requirements, acceptance criteria, and traceability matrix for the platform.
 
-> **Implementation status note (v1.3.0):** A comprehensive code review conducted in March 2026 identified several gaps between documentation and the current implementation. The sections below distinguish between requirements that are **Implemented**, **In Progress** (active PR), **Pending** (required next work), and **Planned** (follow-up). Avoid treating claims marked *Planned* or *Pending* as production-ready guarantees. See [`Docs/Findings-Backlog.md`](Findings-Backlog.md) for the full prioritized remediation backlog.
+> **Implementation status note (v1.3.0):** A comprehensive code review conducted in March 2026 identified several gaps between documentation and the current implementation. The sections below distinguish between requirements that are **Implemented**, **In Progress** (active PR), **Pending** (required next work), and **Planned** (follow-up). Avoid treating claims marked *Planned* or *Pending* as production-ready guarantees. See [`docs/Findings-Backlog.md`](Findings-Backlog.md) for the full prioritized remediation backlog.
 
 ## 3. Constraints, Assumptions, and Dependencies
 
@@ -290,9 +290,9 @@ The Risk Service evaluates transactions for fraud and creditworthiness.
 
 ## 9. Related Documents
 
-- [`Docs/Findings-Backlog.md`](Findings-Backlog.md) — Prioritized backlog of code-review findings and recommended issue titles.
-- [`Docs/WalletService-Design.md`](WalletService-Design.md) — WalletService detailed design.
-- [`Docs/PaymentService-Design.md`](PaymentService-Design.md) — PaymentService detailed design.
-- [`Docs/LendingService-Design.md`](LendingService-Design.md) — LendingService detailed design.
-- [`Docs/Security-Design.md`](Security-Design.md) — Security design and controls.
-- [`Docs/Requirements-Analysis-Report.md`](Requirements-Analysis-Report.md) — Gap analysis and recommendations report.
+- [`docs/Findings-Backlog.md`](Findings-Backlog.md) — Prioritized backlog of code-review findings and recommended issue titles.
+- [`docs/WalletService-Design.md`](WalletService-Design.md) — WalletService detailed design.
+- [`docs/PaymentService-Design.md`](PaymentService-Design.md) — PaymentService detailed design.
+- [`docs/LendingService-Design.md`](LendingService-Design.md) — LendingService detailed design.
+- [`docs/Security-Design.md`](Security-Design.md) — Security design and controls.
+- [`docs/Requirements-Analysis-Report.md`](Requirements-Analysis-Report.md) — Gap analysis and recommendations report.
