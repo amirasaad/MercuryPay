@@ -503,9 +503,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     /// <summary>
-    /// TEST-LEND-004 (Pending): amount == 0 returns 400 Bad Request.
+    /// TEST-LEND-004: amount == 0 returns 400 Bad Request.
     /// </summary>
-    [Fact(Skip = "Pending REQ-LEND-004: enforce amount > 0")]
+    [Fact]
     [Trait("TestId", "TEST-LEND-004")]
     public async Task CreateLoan_ReturnsBadRequest_WhenAmountIsZero()
     {
@@ -516,9 +516,9 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     /// <summary>
-    /// TEST-LEND-004 (Pending): invalid ISO 4217 currency returns 400 Bad Request.
+    /// TEST-LEND-004: invalid ISO 4217 currency returns 400 Bad Request.
     /// </summary>
-    [Fact(Skip = "Pending REQ-LEND-004: validate ISO 4217 currency")]
+    [Fact]
     [Trait("TestId", "TEST-LEND-004")]
     public async Task CreateLoan_ReturnsBadRequest_WhenCurrencyCodeIsInvalid()
     {
@@ -538,12 +538,21 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     /// <summary>
-    /// TEST-LEND-006 (Pending): Installment public setters restricted to hydration-only.
+    /// TEST-LEND-006: Installment public setters restricted — only domain methods mutate state.
     /// </summary>
-    [Fact(Skip = "Pending REQ-LEND-006: restrict Installment public mutability")]
+    [Fact]
     [Trait("TestId", "TEST-LEND-006")]
     public void Installment_PublicSetters_AreRestricted()
     {
+        var installmentType = typeof(MercuryPay.LendingService.Domain.Installment);
+
+        var publicSettableProperties = installmentType
+            .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(p => p.SetMethod != null && p.SetMethod.IsPublic)
+            .Select(p => p.Name)
+            .ToList();
+
+        Assert.Empty(publicSettableProperties);
     }
 
     /// <summary>

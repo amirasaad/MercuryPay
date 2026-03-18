@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using MercuryPay.LendingService.Domain;
@@ -44,6 +45,12 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         {
             _logger.LogWarning("Invalid loan term: {Term}", termMonths);
             throw new ArgumentException("Term must be between 1 and 120 months");
+        }
+
+        if (string.IsNullOrWhiteSpace(currency) || !IsValidIsoCurrencyCode(currency))
+        {
+            _logger.LogWarning("Invalid currency code: {Currency}", currency);
+            throw new ArgumentException("Currency must be a valid ISO 4217 code (e.g. USD, EUR).");
         }
 
         var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Processing", DateTime.UtcNow, termMonths, DefaultAnnualInterestRate);
@@ -170,5 +177,24 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
         return _context.Loans
             .Include(loan => loan.RepaymentSchedule)
             .ThenInclude(schedule => schedule!.Installments);
+    }
+
+    private static readonly HashSet<string> _validIsoCurrencyCodes = BuildValidCurrencyCodes();
+
+    private static HashSet<string> BuildValidCurrencyCodes()
+    {
+        var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var culture in CultureInfo.GetCultures(CultureTypes.SpecificCultures))
+        {
+            try { codes.Add(new RegionInfo(culture.Name).ISOCurrencySymbol); }
+            catch { /* unsupported culture — skip */ }
+        }
+        return codes;
+    }
+
+    private static bool IsValidIsoCurrencyCode(string code)
+    {
+        var trimmed = code.Trim();
+        return trimmed.Length == 3 && trimmed.All(char.IsLetter) && _validIsoCurrencyCodes.Contains(trimmed);
     }
 }
