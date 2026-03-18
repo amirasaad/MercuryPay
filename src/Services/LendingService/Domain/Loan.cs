@@ -4,12 +4,12 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
 {
     public Guid Id { get; private set; } = id;
     public string UserId { get; private set; } = userId;
-    public decimal Amount { get; private set; } = amount > 100000m ? throw new ArgumentException("Amount exceeds maximum allowed") : amount;
-    public string Currency { get; private set; } = currency;
+    public decimal Amount { get; private set; } = amount > 100000m ? throw new ArgumentException("Amount exceeds maximum allowed") : amount <= 0m ? throw new ArgumentException("Amount must be positive.") : amount;
+    public string Currency { get; private set; } = string.IsNullOrWhiteSpace(currency) ? throw new ArgumentException("Currency must not be empty.", nameof(currency)) : currency.Trim().ToUpperInvariant();
     public string Status { get; private set; } = status;
     public DateTime CreatedAt { get; private set; } = createdAt;
     public int TermMonths { get; private set; } = termMonths;
-    public decimal AnnualInterestRate { get; private set; } = annualInterestRate;
+    public decimal AnnualInterestRate { get; private set; } = annualInterestRate <= 0m || annualInterestRate > 1m ? throw new ArgumentOutOfRangeException(nameof(annualInterestRate), "Annual interest rate must be a fractional decimal between 0 (exclusive) and 1.0 (inclusive), e.g. 0.05 for 5%.") : annualInterestRate;
     public RepaymentSchedule? RepaymentSchedule { get; private set; }
 
     public void GenerateRepaymentSchedule()
@@ -101,21 +101,18 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
         {
             if (remainingPayment <= 0) break;
 
-            var index = RepaymentSchedule.Installments.IndexOf(installment);
             var amountDue = installment.TotalAmount - installment.PaidAmount;
             
             if (remainingPayment >= amountDue)
             {
                 // Full payment for this installment
-                installment.PaidAmount = installment.TotalAmount;
-                installment.Status = "Paid";
                 remainingPayment -= amountDue;
+                installment.MarkAsPaid();
             }
             else
             {
                 // Partial payment
-                installment.PaidAmount += remainingPayment;
-                installment.Status = "PartiallyPaid";
+                installment.ApplyPayment(remainingPayment);
                 remainingPayment = 0;
             }
         }
@@ -138,7 +135,7 @@ public class Loan(Guid id, string userId, decimal amount, string currency, strin
         {
             if (i.Status == "Pending" || i.Status == "PartiallyPaid")
             {
-                i.Status = "Cancelled";
+                i.Cancel();
             }
         }
     }

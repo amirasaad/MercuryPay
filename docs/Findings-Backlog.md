@@ -23,17 +23,17 @@ The March 2026 code review identified the following major categories of gaps bet
 | F-07 | Wallet ownership not enforced (cross-user wallet access possible) | High | Open |
 | F-08 | `POST /wallets/{id}/credit` is under-protected and uses a raw decimal request body | High | Open |
 | F-09 | Shared auth bypass (`DisableAuthValidation`) can disable all JWT validation in dev; risk of leaking to other environments | High | Open |
-| F-10 | PaymentService: `Reject(reason)` ignores the rejection reason (auditability gap) | Medium | Open |
-| F-11 | PaymentService: no domain-level guards for positive amount, sender ≠ receiver, currency normalization | Medium | Open |
+| F-10 | PaymentService: `Reject(reason)` ignores the rejection reason (auditability gap) | Medium | **Fixed** |
+| F-11 | PaymentService: no domain-level guards for positive amount, sender ≠ receiver, currency normalization | Medium | **Fixed** |
 | F-12 | PaymentService / WalletService: no explicit outcome events for payment success/failure | Medium | Open |
-| F-13 | LendingService: annual interest rate representation ambiguous (fractional vs percentage integer) | High | Open |
-| F-14 | LendingService: no input validation for `amount`, `termMonths`, interest range, currency | Medium | Open |
-| F-15 | LendingService: `Installment` has public setters weakening domain safety | Low | Open |
+| F-13 | LendingService: annual interest rate representation ambiguous (fractional vs percentage integer) | High | **Fixed** |
+| F-14 | LendingService: no input validation for `amount`, `termMonths`, interest range, currency | Medium | **Fixed** |
+| F-15 | LendingService: `Installment` has public setters weakening domain safety | Low | **Fixed** |
 | F-16 | LendingService: no explicit `RepaymentProcessed`/`RepaymentFailed` outcome events | Medium | Open |
 | F-17 | String-based status fields across services (PaymentService, LendingService) | Medium | Open |
 | F-18 | No-op / empty outbox migrations in RiskService confuse migration history | Low | Open |
 | F-19 | `SafeMigrateAsync` runs at app startup and writes files to `AppContext.BaseDirectory` (unsafe in containers) | Medium | Open |
-| F-20 | Test coverage gaps: concurrency races, security/authz, distributed failure paths not covered | High | Open |
+| F-20 | Test coverage gaps: concurrency races, security/authz, distributed failure paths not covered | High | Partially Fixed |
 | F-21 | mTLS and encryption-at-rest claims in README/docs not verified in surfaced code | Medium | Open |
 | F-22 | Demo wallet auto-seed of 10,000,000 for `LendingService` in `PaymentCreatedConsumer` | Medium | Open |
 | F-23 | `Docs` and `docs` directories both exist (case-sensitivity footgun) | Low | Open |
@@ -245,8 +245,8 @@ Issues are grouped by priority tier. Within each tier they are ordered by impact
 | ISSUE-01 | Align README and architecture docs with implementation | P0 | F-01, F-23 | Open |
 | ISSUE-02 | Harden WalletService access control and API semantics | P1 | F-06, F-07, F-08 | Open (depends on PR #1) |
 | ISSUE-03 | Harden shared authentication defaults | P2 | F-09, F-21 | Open |
-| ISSUE-04 | Harden PaymentService domain invariants | P3 | F-10, F-11, F-17 | Open |
-| ISSUE-05 | Harden LendingService money math and repayment rules | P3 | F-13, F-14, F-15, F-17 | Open |
+| ISSUE-04 | Harden PaymentService domain invariants | P3 | F-10, F-11, F-17 | **Partially Fixed** (F-10, F-11 resolved; F-17 open) |
+| ISSUE-05 | Harden LendingService money math and repayment rules | P3 | F-13, F-14, F-15, F-17 | **Partially Fixed** (F-13, F-14, F-15 resolved; F-17 open) |
 | ISSUE-06 | Complete payment and repayment outcome events | P4 | F-12, F-16 | Open |
 | ISSUE-07 | Clean up migrations and infrastructure placeholders | P4 | F-18, F-19, F-22 | Open |
 | ISSUE-08 | Define production-safe database migration strategy | P4 | F-19 | Open |

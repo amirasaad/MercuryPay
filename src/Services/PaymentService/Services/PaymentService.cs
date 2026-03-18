@@ -74,7 +74,8 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             payment.Currency,
             payment.FromUserId,
             payment.ToUserId,
-            payment.ReferenceId
+            payment.ReferenceId,
+            payment.RejectionReason
         );
     }
 
@@ -95,7 +96,8 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             payment.Currency,
             payment.FromUserId,
             payment.ToUserId,
-            payment.ReferenceId
+            payment.ReferenceId,
+            payment.RejectionReason
         );
     }
 }

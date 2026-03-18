@@ -143,4 +143,106 @@ public class LoanTests
         // Note: Current implementation swallows overpayment. 
         // In a real system, we might want to track this or refund it, but for now we ensure it doesn't break logic.
     }
+
+    // ── Constructor guards ────────────────────────────────────────────────────
+
+    [Fact]
+    public void Loan_WhenAmountIsZero_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 0m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+    }
+
+    [Fact]
+    public void Loan_WhenAmountIsNegative_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", -500m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+    }
+
+    [Fact]
+    public void Loan_WhenCurrencyIsEmpty_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "", "Approved", DateTime.UtcNow, 12, 0.05m));
+        Assert.Throws<ArgumentException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "   ", "Approved", DateTime.UtcNow, 12, 0.05m));
+    }
+
+    [Fact]
+    public void Loan_Constructor_NormalizesCurrencyToUpperCase()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "usd", "Approved", DateTime.UtcNow, 12, 0.05m);
+        Assert.Equal("USD", loan.Currency);
+    }
+
+    [Fact]
+    public void Loan_WhenAnnualInterestRateIsZero_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0m));
+    }
+
+    [Fact]
+    public void Loan_WhenAnnualInterestRateIsNegative_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, -0.05m));
+    }
+
+    [Fact]
+    public void Loan_WhenAnnualInterestRateExceedsOne_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 1.01m));
+    }
+
+    [Fact]
+    public void Loan_WhenAnnualInterestRateIsStoredAsPercentageInteger_ThrowsArgumentOutOfRangeException()
+    {
+        // Catches the catastrophic bug where AnnualInterestRate=12 is passed instead of 0.12
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 12m));
+    }
+
+    [Fact]
+    public void Loan_WhenAnnualInterestRateIsExactlyOne_DoesNotThrow()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 1.0m);
+        Assert.Equal(1.0m, loan.AnnualInterestRate);
+    }
+
+    // ── Installment domain methods ────────────────────────────────────────────
+
+    [Fact]
+    public void Installment_MarkAsPaid_SetsPaidAmountEqualToTotal()
+    {
+        var installment = new Installment(DateTime.UtcNow.AddMonths(1), 90m, 10m, 100m);
+
+        installment.MarkAsPaid();
+
+        Assert.Equal("Paid", installment.Status);
+        Assert.Equal(100m, installment.PaidAmount);
+    }
+
+    [Fact]
+    public void Installment_ApplyPayment_AccumulatesPaidAmountAndSetsPartiallyPaid()
+    {
+        var installment = new Installment(DateTime.UtcNow.AddMonths(1), 90m, 10m, 100m);
+
+        installment.ApplyPayment(40m);
+
+        Assert.Equal("PartiallyPaid", installment.Status);
+        Assert.Equal(40m, installment.PaidAmount);
+    }
+
+    [Fact]
+    public void Installment_Cancel_SetsCancelledStatus()
+    {
+        var installment = new Installment(DateTime.UtcNow.AddMonths(1), 90m, 10m, 100m);
+
+        installment.Cancel();
+
+        Assert.Equal("Cancelled", installment.Status);
+    }
 }
