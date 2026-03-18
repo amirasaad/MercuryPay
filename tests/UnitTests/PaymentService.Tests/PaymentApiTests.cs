@@ -161,3 +161,44 @@ public class PaymentApiTests : IClassFixture<WebApplicationFactory<Program>>
         }
     }
 }
+
+/// <summary>
+/// Security tests asserting that the dev auth bypass is only active in the Development environment.
+/// </summary>
+public class DevAuthBypassSecurityTests
+{
+    [Theory]
+    [InlineData("Staging")]
+    [InlineData("Production")]
+    public async Task DevAuthBypass_IsDisabled_WhenEnvironmentIsNotDevelopment(string environment)
+    {
+        // Arrange – simulate a misconfiguration where DisableAuthValidation=true is set
+        // in a non-Development environment. The bypass must have NO effect.
+        var mockPublish = new Mock<IPublishEndpoint>();
+
+        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment(environment);
+            builder.UseSetting("ConnectionStrings:paymentdb", "");
+            builder.UseSetting("Identity:Authority", "https://dummy-auth.example.com");
+            builder.UseSetting("Identity:Audience", "account");
+            builder.UseSetting("Identity:DisableAuthValidation", "true");
+
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPublishEndpoint));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddScoped(_ => mockPublish.Object);
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        // Act – request without any Authorization header (no bypass should inject a user)
+        var request = new PaymentRequest(100.00m, "USD", "user_a", "user_b", null);
+        var response = await client.PostAsJsonAsync("/payments", request);
+
+        // Assert – must be rejected; DevAuthBypassMiddleware must not inject default credentials
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+}
