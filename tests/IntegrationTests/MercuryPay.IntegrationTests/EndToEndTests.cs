@@ -24,6 +24,12 @@ public class EndToEndTests(ITestOutputHelper output)
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
             client.AddStandardResilienceHandler();
+            // Accept self-signed dev certs used by Aspire-launched services in the test environment.
+            // Never use this handler outside of integration/test code.
+            client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
         });
 
         await using var app = await appHost.BuildAsync();
@@ -35,8 +41,8 @@ public class EndToEndTests(ITestOutputHelper output)
         await resourceNotificationService.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("walletservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice");
-        var walletClient = app.CreateHttpClient("walletservice");
+        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var walletClient = app.CreateHttpClient("walletservice", "http");
 
         paymentClient.Timeout = TimeSpan.FromMinutes(2);
         walletClient.Timeout = TimeSpan.FromMinutes(2);
