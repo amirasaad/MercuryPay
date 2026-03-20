@@ -39,7 +39,8 @@ public class EndToEndTests(ITestOutputHelper output)
         
         await app.StartAsync();
 
-        // Wait for services to be ready
+        // Wait for services and message broker to be ready
+        await resourceNotificationService.WaitForResourceAsync("messaging", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("walletservice", KnownResourceStates.Running);
 
@@ -125,6 +126,14 @@ public class EndToEndTests(ITestOutputHelper output)
         var toWallet = await EnsureWalletAsync(walletClient, currency, "Receiver");
 
         // 4. Create Payment
+        // Before creating the payment, ensure WalletService's MassTransit bus is fully connected
+        // and all consumer queues are bound. PaymentService publishes events directly to RabbitMQ
+        // (bypassing the transactional outbox) from HTTP request handlers, so messages will be
+        // dropped if the WalletService consumer queue is not yet bound to the exchange.
+        output.WriteLine("Waiting for WalletService MassTransit bus to be ready...");
+        var walletHealthy = await WaitForServiceHealthyAsync(walletClient);
+        output.WriteLine($"WalletService health check: {(walletHealthy ? "Healthy" : "Timed out — proceeding anyway")}");
+
         output.WriteLine("Creating Payment...");
         var paymentRequest = new PaymentRequest(fromUserId, toUserId, paymentAmount, currency);
         paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
@@ -226,6 +235,7 @@ public class EndToEndTests(ITestOutputHelper output)
     {
         var timeout = TimeSpan.FromMinutes(2);
         var start = DateTime.UtcNow;
+        decimal? lastSeen = null;
 
         while (DateTime.UtcNow - start < timeout)
         {
@@ -234,10 +244,42 @@ public class EndToEndTests(ITestOutputHelper output)
             {
                 return;
             }
+            lastSeen = wallet.Balance;
             await Task.Delay(1000);
         }
 
-        throw new TimeoutException($"Wallet {walletId} balance did not reach {expectedBalance} within {timeout.TotalSeconds} seconds.");
+        throw new TimeoutException($"Wallet {walletId} balance did not reach {expectedBalance} within {timeout.TotalSeconds} seconds. Last observed balance: {lastSeen?.ToString() ?? "none (never polled successfully)"}.");
+    }
+
+    /// <summary>
+    /// Polls the /health endpoint until it returns a 200 OK (all health checks pass, including
+    /// the MassTransit bus health check), confirming that all consumer queues are bound.
+    /// Returns true if healthy within the timeout, false otherwise.
+    /// </summary>
+    private static async Task<bool> WaitForServiceHealthyAsync(HttpClient client, int timeoutSeconds = 120)
+    {
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        var start = DateTime.UtcNow;
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                // /health is AllowAnonymous and includes all health checks (including MassTransit bus)
+                var response = await client.GetAsync("/health");
+                if (response.IsSuccessStatusCode)
+                    return true;
+            }
+            catch (HttpRequestException)
+            {
+                // Service not yet reachable — keep retrying
+            }
+            catch (TaskCanceledException)
+            {
+                // Request timed out — keep retrying
+            }
+            await Task.Delay(2000);
+        }
+        return false;
     }
 }
 
