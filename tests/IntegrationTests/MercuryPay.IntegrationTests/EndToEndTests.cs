@@ -116,7 +116,8 @@ public class EndToEndTests(ITestOutputHelper output)
         // 2. Credit Sender Wallet
         output.WriteLine("Crediting Sender Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
-        var creditResponse = await PostWithRetriesAsync(walletClient, $"/Wallets/{fromWallet.Id}/credit", initialCredit);
+        var creditResponse = await PostWithRetriesAsync(walletClient, $"/Wallets/{fromWallet.Id}/credit",
+            new { Amount = initialCredit, TransactionId = Guid.NewGuid().ToString(), Description = "Initial credit" });
         output.WriteLine($"Credit Response: {creditResponse.StatusCode}");
         creditResponse.EnsureSuccessStatusCode();
 

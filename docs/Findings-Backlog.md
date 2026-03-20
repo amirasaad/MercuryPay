@@ -37,6 +37,8 @@ The March 2026 code review identified the following major categories of gaps bet
 | F-21 | mTLS and encryption-at-rest claims in README/docs not verified in surfaced code | Medium | Open |
 | F-22 | Demo wallet auto-seed of 10,000,000 for `LendingService` in `PaymentCreatedConsumer` | Medium | Open |
 | F-23 | `Docs` and `docs` directories both exist (case-sensitivity footgun) | Low | Open |
+| F-24 | `LendingService.CreateLoan` published `LoanCreated` before `SaveChangesAsync` — consumer could race and find no row | High | **Fixed** |
+| F-25 | `CreateWalletRequest.UserId` was non-nullable, causing `[ApiController]` model binding to reject wallet creation before claims-based auto-fill could run | High | **Fixed** |
 
 ---
 
