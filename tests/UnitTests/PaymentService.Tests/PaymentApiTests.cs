@@ -176,7 +176,7 @@ public class DevAuthBypassSecurityTests
         // in a non-Development environment. The bypass must have NO effect.
         var mockPublish = new Mock<IPublishEndpoint>();
 
-        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment(environment);
             builder.UseSetting("ConnectionStrings:paymentdb", "");
@@ -192,7 +192,7 @@ public class DevAuthBypassSecurityTests
             });
         });
 
-        var client = factory.CreateClient();
+        using var client = factory.CreateClient();
 
         // Act – request without any Authorization header (no bypass should inject a user)
         var request = new PaymentRequest(100.00m, "USD", "user_a", "user_b", null);

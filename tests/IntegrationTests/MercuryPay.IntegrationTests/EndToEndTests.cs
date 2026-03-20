@@ -167,13 +167,17 @@ public class EndToEndTests(ITestOutputHelper output)
         {
             try
             {
-                lastResponse = await client.PostAsJsonAsync(uri, body);
+                var response = await client.PostAsJsonAsync(uri, body);
                 // Return immediately on any 2xx (success) or 4xx (permanent client error — retrying won't help).
                 // Only retry on 5xx server errors, which may be transient during service startup.
-                if (lastResponse.IsSuccessStatusCode || (int)lastResponse.StatusCode < 500)
+                if (response.IsSuccessStatusCode || (int)response.StatusCode < 500)
                 {
-                    return lastResponse;
+                    lastResponse?.Dispose();
+                    return response;
                 }
+                // 5xx: dispose the previous response before taking ownership of the new one.
+                lastResponse?.Dispose();
+                lastResponse = response;
             }
             catch (HttpRequestException)
             {
