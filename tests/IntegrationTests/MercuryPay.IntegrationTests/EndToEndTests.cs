@@ -93,8 +93,9 @@ public class EndToEndTests(ITestOutputHelper output)
             output.WriteLine($"Payment Connectivity Check Failed: {ex.Message}");
         }
 
-        var fromUserId = "user_sender";
-        var toUserId = "user_receiver";
+        var runId = Guid.NewGuid().ToString("N")[..8];
+        var fromUserId = $"sender_{runId}";
+        var toUserId = $"receiver_{runId}";
         var currency = "USD";
         var initialCredit = 1000m;
         var paymentAmount = 100m;
@@ -165,13 +166,16 @@ public class EndToEndTests(ITestOutputHelper output)
             try
             {
                 lastResponse = await client.PostAsJsonAsync(uri, body);
-                if (lastResponse.IsSuccessStatusCode)
+                // Return immediately on any 2xx (success) or 4xx (permanent client error — retrying won't help).
+                // Only retry on 5xx server errors, which may be transient during service startup.
+                if (lastResponse.IsSuccessStatusCode || (int)lastResponse.StatusCode < 500)
                 {
                     return lastResponse;
                 }
             }
             catch
             {
+                // Network-level error (connection refused, timeout, etc.) — service may still be starting.
             }
 
             await Task.Delay(1000);
