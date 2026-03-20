@@ -85,6 +85,23 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
             // Publish PaymentProcessed event
             // await _publishEndpoint.Publish(new PaymentProcessed(...));
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // xmin row-version mismatch: another transaction modified the wallet between
+            // our read and this save. Reload the entries so the next MassTransit retry
+            // attempt starts with a fresh snapshot rather than a stale xmin value.
+            try
+            {
+                foreach (var entry in ex.Entries)
+                    await entry.ReloadAsync();
+            }
+            catch (Exception reloadEx)
+            {
+                _logger.LogWarning(reloadEx, "Failed to reload entries after concurrency conflict for payment {PaymentId}", message.PaymentId);
+            }
+            _logger.LogWarning(ex, "Concurrency conflict persisting payment {PaymentId} — entries reloaded, will retry", message.PaymentId);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error persisting payment {PaymentId} — will retry", message.PaymentId);
