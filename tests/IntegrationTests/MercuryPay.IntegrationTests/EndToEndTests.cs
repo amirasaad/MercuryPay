@@ -23,9 +23,11 @@ public class EndToEndTests(ITestOutputHelper output)
         // Ensure resources are running
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
-            // Accept self-signed dev certs used by Aspire-launched services in the test environment.
-            // Never use this handler outside of integration/test code.
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
+            // Its attempt-timeout (default 10 s) silently retries POST /Wallets when the service is
+            // slow during startup.  If the server completed the first request before the timeout the
+            // retry arrives at a wallet that already exists and returns 409, failing the test.
+            // Retry logic is managed explicitly by PostWithRetriesAsync below.
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -44,8 +46,8 @@ public class EndToEndTests(ITestOutputHelper output)
         var paymentClient = app.CreateHttpClient("paymentservice", "http");
         var walletClient = app.CreateHttpClient("walletservice", "http");
 
-        paymentClient.Timeout = TimeSpan.FromMinutes(2);
-        walletClient.Timeout = TimeSpan.FromMinutes(2);
+        paymentClient.Timeout = TimeSpan.FromMinutes(5);
+        walletClient.Timeout = TimeSpan.FromMinutes(5);
         
         // Build simple dev JWTs that the Dev auth pipeline accepts in Development with validation disabled
         static string CreateDevJwt(string subject)

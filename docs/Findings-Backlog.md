@@ -39,6 +39,7 @@ The March 2026 code review identified the following major categories of gaps bet
 | F-23 | `Docs` and `docs` directories both exist (case-sensitivity footgun) | Low | Open |
 | F-24 | `LendingService.CreateLoan` published `LoanCreated` before `SaveChangesAsync` — consumer could race and find no row | High | **Fixed** |
 | F-25 | `CreateWalletRequest.UserId` was non-nullable, causing `[ApiController]` model binding to reject wallet creation before claims-based auto-fill could run | High | **Fixed** |
+| F-26 | `AddStandardResilienceHandler()` in E2E test `ConfigureHttpClientDefaults` had a 10 s attempt-timeout that silently retried `POST /Wallets`; if the server completed the first request before the timeout, the retry returned 409 and the test failed | High | **Fixed** |
 
 ---
 
