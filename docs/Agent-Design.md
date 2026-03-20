@@ -35,9 +35,54 @@ The Agent Platform is a core component of MercuryPay that hosts intelligent, aut
 
 #### 2.1.2 Event Subscription & Processing
 
-- Agents subscribe to specific event types from the central event bus (Kafka/Redis Streams).
+- Agents subscribe to specific event types from the central event bus.
 - Each agent processes events asynchronously.
 - Events are delivered with at-least-once guarantees; agents must be idempotent.
+
+#### 2.1.2.1 Executable Event Contract
+
+This section is normative and is intended to be directly testable.
+
+##### **Message metadata (required)**
+
+- `eventId` (globally unique)
+- `eventType` (string)
+- `occurredAt` (timestamp)
+- `correlationId` (optional but recommended)
+- `causationId` (optional but recommended)
+- `partitionKey` (string used for ordering; e.g., `paymentId`, `walletId`, `loanId`)
+
+##### **Payload (required)**
+
+- A versioned schema for the domain event (e.g., `PaymentCreated`, `FraudEvaluated`).
+
+##### **Implementation mapping (current repo)**
+
+- Current services use MassTransit with RabbitMQ and the EF outbox/inbox pattern.
+- `eventId` maps to `ConsumeContext.MessageId`.
+- `correlationId` maps to `ConsumeContext.CorrelationId`.
+- `causationId` maps to `ConsumeContext.InitiatorId` (or an explicit header when present).
+- `eventType` maps to the .NET message type name.
+
+#### 2.1.2.2 Executable Idempotency Contract
+
+This section is normative and is intended to be directly testable.
+
+##### **Idempotency key**
+
+- `idempotencyKey = "{agentType}:{eventId}"`
+
+##### **State machine**
+
+- `New` → `InProgress` (acquires a lock with TTL)
+- `InProgress` → `Completed` (on successful processing; persists a completion TTL)
+- `InProgress` → `New` (on failure; releases the lock so the event can be retried)
+- `Completed` → `Completed` (duplicate deliveries are ignored)
+
+##### **Required behavior**
+
+- If the same `eventId` is delivered twice, an agent executes user code at most once for that `(agentType, eventId)` pair.
+- If an agent fails while processing an `eventId`, a subsequent delivery of the same `eventId` must be allowed to execute again.
 
 #### 2.1.3 Coordination & Collaboration
 
@@ -51,6 +96,41 @@ The Agent Platform is a core component of MercuryPay that hosts intelligent, aut
 - **Circuit Breaker** – If an agent repeatedly fails, it is temporarily suspended.
 - **Fallback** – Agents can invoke fallback actions (e.g., escalate to manual review).
 - **Timeouts** – Long-running agent tasks are timed out; state saved for resumption.
+
+#### 2.1.4.1 Executable Retry Policy Contract
+
+This section is normative and is intended to be directly testable.
+
+##### **Backoff schedule**
+
+- Attempts are numbered starting at `1`.
+- `rawDelay(attempt) = baseDelay * 2^(attempt-1)`
+- `delay(attempt) = min(maxDelay, rawDelay(attempt))`
+- Optional jitter is applied as a bounded deviation around `delay(attempt)`:
+  - `jitteredDelay = delay(attempt) * (1 + jitterFactor * r)`
+  - where `r ∈ [-1, 1]`
+
+##### **Required behavior**
+
+- `delay(1) == baseDelay`
+- `delay(attempt)` is non-decreasing with `attempt`
+- `delay(attempt) <= maxDelay` for all attempts
+
+#### 2.1.4.2 Executable Circuit Breaker Contract
+
+This section is normative and is intended to be directly testable.
+
+##### **Failure counting**
+
+- The breaker tracks failures inside a rolling `samplingWindow`.
+- When failure count within the window reaches `failureThreshold`, the breaker opens.
+
+##### **Open state**
+
+- While open, the breaker rejects execution.
+- After `openDuration`, the breaker permits a single trial execution.
+  - Trial success closes the breaker.
+  - Trial failure re-opens the breaker for a new `openDuration`.
 
 ### 2.2 Agent-Specific Requirements
 
@@ -94,6 +174,28 @@ The Agent Platform is a core component of MercuryPay that hosts intelligent, aut
 - **Anomaly Detection** – Detect when agent success rates drop below threshold; trigger alerts.
 - **Feedback Loop** – Metrics are fed back to agents (e.g., via a shared store) so agents can adjust behavior (e.g., retry agent can learn optimal backoff based on historical success rates).
 - **Dashboard** – Visualize agent performance (success rate, latency, events processed).
+
+#### 2.3.1 Executable Success Rate & Anomaly Contract
+
+This section is normative and is intended to be directly testable.
+
+##### **Success rate**
+
+- For a given `agentType` and time window `[windowStart, windowEnd)`, success rate is:
+  - `successRate = successes / total`
+  - where `total` counts only tasks with `startTime` inside the window
+
+##### **Anomaly threshold**
+
+- An anomaly is triggered when:
+  - `total >= minSamples`
+  - `successRate < minSuccessRate`
+
+##### **Minimum defaults (Phase 1)**
+
+- `minSuccessRate = 0.95`
+- `window = 5 minutes`
+- `minSamples = 100`
 
 ---
 
