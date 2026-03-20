@@ -55,7 +55,7 @@ public class Wallet
     {
         if (amount <= 0) throw new ArgumentException("Amount must be positive");
         if (Ledger.Any(x => x.TransactionId == transactionId)) return; // Idempotent: ignore duplicate
-        if (Balance < amount) throw new InvalidOperationException("Insufficient funds");
+        if (Balance < amount) throw new InsufficientFundsException(Id, Balance, amount);
 
         Ledger.Add(new LedgerEntry(
             Guid.NewGuid(),

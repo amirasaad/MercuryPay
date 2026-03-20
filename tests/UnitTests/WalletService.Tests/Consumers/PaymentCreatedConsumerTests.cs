@@ -74,7 +74,7 @@ public class PaymentCreatedConsumerTests : IDisposable
     }
 
     [Fact]
-    public async Task Consume_DoesNothing_WhenFromWalletDoesNotExist()
+    public async Task Consume_ThrowsRetryableException_WhenFromWalletDoesNotExist()
     {
         // Arrange
         var fromUserId = "user_missing";
@@ -89,12 +89,14 @@ public class PaymentCreatedConsumerTests : IDisposable
         var contextMock = new Mock<ConsumeContext<PaymentCreated>>();
         contextMock.Setup(x => x.Message).Returns(message);
 
-        // Act
-        await _consumer.Consume(contextMock.Object);
+        // Act & Assert — consumer must throw so that MassTransit retries the message
+        // instead of silently acknowledging it without updating any balances.
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _consumer.Consume(contextMock.Object));
+        Assert.Contains("Sender wallet not found", ex.Message);
 
-        // Assert
+        // Receiver wallet should remain untouched
         var updatedToWallet = await _context.Wallets.FindAsync(toWallet.Id);
-        Assert.Equal(0m, updatedToWallet!.Balance); // Should not have changed
+        Assert.Equal(0m, updatedToWallet!.Balance);
     }
 
     [Fact]

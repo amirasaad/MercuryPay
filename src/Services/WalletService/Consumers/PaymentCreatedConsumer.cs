@@ -39,11 +39,13 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
             }
             else
             {
-                // Should publish PaymentFailed?
-                _logger.LogWarning("Sender wallet not found for user {UserId} with currency {Currency}. Payment {PaymentId} cannot be processed.", 
+                // Sender wallet does not exist. This should not happen in a correctly
+                // deployed system (wallet must be created before initiating a payment).
+                // Throwing causes MassTransit to move the message to the error queue
+                // after exhausting retries, rather than silently discarding it.
+                _logger.LogWarning("Sender wallet not found for user {UserId} with currency {Currency}. Payment {PaymentId} will be retried.",
                     message.FromUserId, message.Currency, message.PaymentId);
-                // For now, log and return. In real app, we need to handle this.
-                return;
+                throw new InvalidOperationException($"Sender wallet not found for user '{message.FromUserId}' currency '{message.Currency}'.");
             }
         }
         
@@ -57,32 +59,35 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
             _context.Wallets.Add(toWallet);
         }
 
+        // Apply domain operations first — these throw only for business-rule violations
+        // (e.g. insufficient funds) that should NOT be retried.
         try
         {
-            // Debit from sender
             fromWallet.Debit(message.Amount, message.PaymentId.ToString(), $"Payment to {message.ToUserId}");
-            
-            // Credit to receiver
             toWallet.Credit(message.Amount, message.PaymentId.ToString(), $"Payment from {message.FromUserId}");
-            
-            await _context.SaveChangesAsync();
-            
-            _logger.LogInformation("Payment {PaymentId} processed successfully. Funds transferred.", message.PaymentId);
-            
-            // Publish PaymentProcessed event
-            // await _publishEndpoint.Publish(new PaymentProcessed(...));
         }
-        catch (InvalidOperationException ex)
+        catch (InsufficientFundsException ex)
         {
-            // Insufficient funds
-            _logger.LogWarning(ex, "Payment {PaymentId} failed due to insufficient funds in wallet {WalletId}", 
+            // Permanent business-rule failure — do not retry.
+            _logger.LogWarning(ex, "Payment {PaymentId} rejected: insufficient funds in wallet {WalletId}",
                 message.PaymentId, fromWallet.Id);
             // Publish PaymentFailed
             // await _publishEndpoint.Publish(new PaymentFailed(...));
+            return;
+        }
+
+        // Persist the balance changes — any DB / infrastructure exception propagates so
+        // MassTransit retries the message (the domain operations are idempotent via TransactionId).
+        try
+        {
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Payment {PaymentId} processed successfully. Funds transferred.", message.PaymentId);
+            // Publish PaymentProcessed event
+            // await _publishEndpoint.Publish(new PaymentProcessed(...));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing payment {PaymentId}", message.PaymentId);
+            _logger.LogError(ex, "Error persisting payment {PaymentId} — will retry", message.PaymentId);
             throw; // Retry via MassTransit
         }
     }

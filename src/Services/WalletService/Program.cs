@@ -33,7 +33,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.AddEventBus(x =>
     {
-        x.AddConsumer<PaymentCreatedConsumer>();
+        x.AddConsumer<PaymentCreatedConsumer, PaymentCreatedConsumerDefinition>();
         x.AddConsumer<LoanRepaymentRequestedConsumer>();
         
         if (!string.IsNullOrEmpty(connectionString))

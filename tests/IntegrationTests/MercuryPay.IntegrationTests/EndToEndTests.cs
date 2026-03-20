@@ -224,7 +224,7 @@ public class EndToEndTests(ITestOutputHelper output)
 
     private async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)
     {
-        var timeout = TimeSpan.FromMinutes(2); 
+        var timeout = TimeSpan.FromMinutes(2);
         var start = DateTime.UtcNow;
 
         while (DateTime.UtcNow - start < timeout)
