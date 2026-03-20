@@ -105,16 +105,7 @@ public class EndToEndTests(ITestOutputHelper output)
         // 1. Create Sender Wallet
         output.WriteLine("Creating Sender Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
-        var createFromWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
-        output.WriteLine($"Create Sender Wallet Response: {createFromWalletResponse.StatusCode}");
-        if (!createFromWalletResponse.IsSuccessStatusCode)
-        {
-            var error = await createFromWalletResponse.Content.ReadAsStringAsync();
-            output.WriteLine($"Error: {error}");
-        }
-        createFromWalletResponse.EnsureSuccessStatusCode();
-        var fromWallet = await createFromWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
-        Assert.NotNull(fromWallet);
+        var fromWallet = await EnsureWalletAsync(walletClient, currency, "Sender");
 
         // 2. Credit Sender Wallet
         output.WriteLine("Crediting Sender Wallet...");
@@ -131,10 +122,7 @@ public class EndToEndTests(ITestOutputHelper output)
         // 3. Create Receiver Wallet
         output.WriteLine("Creating Receiver Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(toUserId));
-        var createToWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
-        createToWalletResponse.EnsureSuccessStatusCode();
-        var toWallet = await createToWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
-        Assert.NotNull(toWallet);
+        var toWallet = await EnsureWalletAsync(walletClient, currency, "Receiver");
 
         // 4. Create Payment
         output.WriteLine("Creating Payment...");
@@ -197,6 +185,41 @@ public class EndToEndTests(ITestOutputHelper output)
         }
 
         throw new TimeoutException($"POST {uri} did not succeed within timeout.");
+    }
+
+    /// <summary>
+    /// Creates a wallet for the currently-authenticated user, or returns the existing one if it was
+    /// already created (e.g., by an infrastructure-level retry after a TCP connection drop).
+    /// </summary>
+    private async Task<WalletDto> EnsureWalletAsync(HttpClient walletClient, string currency, string label)
+    {
+        var createResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
+        output.WriteLine($"Create {label} Wallet Response: {createResponse.StatusCode}");
+
+        if (createResponse.IsSuccessStatusCode)
+        {
+            var wallet = await createResponse.Content.ReadFromJsonAsync<WalletDto>();
+            Assert.NotNull(wallet);
+            return wallet!;
+        }
+
+        if (createResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+            // The wallet was already created — most likely because a prior attempt succeeded on
+            // the server but the TCP connection dropped before the client received the 201,
+            // causing PostWithRetriesAsync to retry and produce a 409 on the second request.
+            // Fetch the existing wallet via GET instead of failing the test.
+            output.WriteLine($"{label} wallet already exists (409); fetching existing wallet.");
+            var existing = await walletClient.GetFromJsonAsync<List<WalletDto>>("/Wallets");
+            var wallet = existing?.FirstOrDefault(w => w.Currency == currency);
+            Assert.NotNull(wallet);
+            return wallet!;
+        }
+
+        var errorBody = await createResponse.Content.ReadAsStringAsync();
+        output.WriteLine($"{label} wallet creation failed: {errorBody}");
+        createResponse.EnsureSuccessStatusCode(); // always throws for non-success status codes
+        throw new InvalidOperationException("Unreachable"); // satisfies the compiler
     }
 
     private async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)

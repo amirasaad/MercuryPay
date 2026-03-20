@@ -83,7 +83,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -131,7 +131,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -177,7 +177,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -223,7 +223,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -276,7 +276,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.MercuryPay_AppHost>();
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            client.AddStandardResilienceHandler();
+            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
