@@ -175,9 +175,13 @@ public class EndToEndTests(ITestOutputHelper output)
                     return lastResponse;
                 }
             }
-            catch
+            catch (HttpRequestException)
             {
-                // Network-level error (connection refused, timeout, etc.) — service may still be starting.
+                // Network-level error (connection refused, DNS, etc.) — service may still be starting.
+            }
+            catch (TaskCanceledException)
+            {
+                // Request timeout during service startup — treat as transient and retry.
             }
 
             await Task.Delay(1000);
