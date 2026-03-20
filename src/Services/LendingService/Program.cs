@@ -20,7 +20,7 @@ builder.Services.AddOpenTelemetry()
 builder.AddEventBus(x => 
 {
     x.AddConsumer<LoanApprovedFaultConsumer>();
-    x.AddConsumer<LoanCreatedConsumer>();
+    x.AddConsumer<LoanCreatedConsumer, LoanCreatedConsumerDefinition>();
     x.AddConsumer<LoanRepaymentProcessedConsumer>();
     x.AddConsumer<FraudEvaluatedConsumer>();
 

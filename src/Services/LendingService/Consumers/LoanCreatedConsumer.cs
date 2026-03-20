@@ -19,8 +19,11 @@ public class LoanCreatedConsumer(LendingDbContext context, ILogger<LoanCreatedCo
         var loan = await _context.Loans.FindAsync(message.LoanId);
         if (loan == null)
         {
-            _logger.LogWarning("Loan {LoanId} not found during processing", message.LoanId);
-            return;
+            // Loan not yet visible — can happen if the consumer runs before the publishing
+            // transaction commits (e.g., in-memory transport in tests). Throwing causes
+            // MassTransit to retry so the consumer can find the loan once it is persisted.
+            _logger.LogWarning("Loan {LoanId} not found; will retry", message.LoanId);
+            throw new InvalidOperationException($"Loan {message.LoanId} not found, will retry.");
         }
 
         // Logic: For now, auto-approve everything

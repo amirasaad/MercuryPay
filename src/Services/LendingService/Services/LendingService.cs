@@ -65,8 +65,8 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             _logger.LogInformation("Loan {LoanId} created for user {UserId}. Status: Processing, Term: {Term} months", loan.Id, userId, termMonths);
         }
 
-        // Publish before SaveChangesAsync: when the MassTransit EF outbox (UseBusOutbox) is
-        // active, Publish enqueues the message into the outbox table; SaveChangesAsync then
+        // Publish LoanCreated. When the MassTransit EF outbox (UseBusOutbox) is active,
+        // Publish enqueues the message into the outbox table; SaveChangesAsync then
         // atomically commits both the new loan row and the outbox entry in one transaction.
         // This eliminates the publish-before-commit race (the consumer only sees the message
         // after the transaction commits, so the loan row already exists by the time the

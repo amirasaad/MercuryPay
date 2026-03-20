@@ -126,13 +126,18 @@ public class EndToEndTests(ITestOutputHelper output)
         var toWallet = await EnsureWalletAsync(walletClient, currency, "Receiver");
 
         // 4. Create Payment
-        // Before creating the payment, ensure WalletService's MassTransit bus is fully connected
-        // and all consumer queues are bound. PaymentService publishes events directly to RabbitMQ
-        // (bypassing the transactional outbox) from HTTP request handlers, so messages will be
-        // dropped if the WalletService consumer queue is not yet bound to the exchange.
+        // Before creating the payment, ensure BOTH service buses are fully connected:
+        // - WalletService: its consumer queue must be bound to the PaymentCreated exchange
+        // - PaymentService: its bus must be connected so the outbox delivery job can send
+        //   the PaymentCreated message to RabbitMQ (PaymentCreated goes through the EF
+        //   transactional outbox; delivery requires an active bus connection)
         output.WriteLine("Waiting for WalletService MassTransit bus to be ready...");
         var walletHealthy = await WaitForServiceHealthyAsync(walletClient);
         output.WriteLine($"WalletService health check: {(walletHealthy ? "Healthy" : "Timed out — proceeding anyway")}");
+
+        output.WriteLine("Waiting for PaymentService MassTransit bus to be ready...");
+        var paymentHealthy = await WaitForServiceHealthyAsync(paymentClient);
+        output.WriteLine($"PaymentService health check: {(paymentHealthy ? "Healthy" : "Timed out — proceeding anyway")}");
 
         output.WriteLine("Creating Payment...");
         var paymentRequest = new PaymentRequest(fromUserId, toUserId, paymentAmount, currency);
