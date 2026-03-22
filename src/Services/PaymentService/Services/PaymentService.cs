@@ -34,7 +34,15 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
         var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending", request.ReferenceId);
 
         await _context.Payments.AddAsync(payment);
-        
+
+        // Commit the Payment record first so that the wallet consumer can always find
+        // a matching payment row if it queries back to PaymentService.
+        await _context.SaveChangesAsync();
+
+        // Publish events directly to the broker after the DB commit.
+        // This is intentionally outside a transactional outbox: the Payment row is
+        // already durable at this point, so the only risk is a publish failure that
+        // causes the HTTP handler to return 5xx (triggering a client retry).
         await _publishEndpoint.Publish(new PaymentCreated(
             paymentId,
             request.FromUserId,
@@ -62,8 +70,6 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             DateTimeOffset.UtcNow,
             request.ReferenceId
         ));
-
-        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Payment {PaymentId} created successfully", payment.Id);
 
