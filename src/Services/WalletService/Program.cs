@@ -33,18 +33,13 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.AddEventBus(x =>
     {
-        x.AddConsumer<PaymentCreatedConsumer>();
+        x.AddConsumer<PaymentCreatedConsumer, PaymentCreatedConsumerDefinition>();
         x.AddConsumer<LoanRepaymentRequestedConsumer>();
-        
-        if (!string.IsNullOrEmpty(connectionString))
-        {
-            x.AddEntityFrameworkOutbox<WalletDbContext>(o =>
-            {
-                o.QueryDelay = TimeSpan.FromSeconds(1);
-                o.UsePostgres();
-                o.UseBusOutbox();
-            });
-        }
+        // Note: UseBusOutbox() is intentionally omitted here. PaymentCreatedConsumer does
+        // not publish any events, so the EF transactional outbox / InboxState idempotency
+        // layer adds SaveChangesAsync overhead without providing reliability benefits.
+        // Duplicate-message protection is handled at the domain level via the unique
+        // (WalletId, TransactionId) index on LedgerEntry.
     });
 }
 

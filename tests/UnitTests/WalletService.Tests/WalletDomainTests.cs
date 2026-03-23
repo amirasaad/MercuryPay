@@ -57,12 +57,12 @@ public class WalletDomainTests
     }
 
     [Fact]
-    public void Debit_ThrowsInvalidOperationException_WhenInsufficientFunds()
+    public void Debit_ThrowsInsufficientFundsException_WhenInsufficientFunds()
     {
         var wallet = new Wallet(Guid.NewGuid(), "user_1", "USD");
         wallet.Credit(50m, "TX-INIT", "initial");
 
-        Assert.Throws<InvalidOperationException>(() => wallet.Debit(100m, "TX-1", "overspend"));
+        Assert.Throws<InsufficientFundsException>(() => wallet.Debit(100m, "TX-1", "overspend"));
     }
 
     [Fact]

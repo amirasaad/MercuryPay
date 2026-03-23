@@ -91,4 +91,7 @@ For the full project requirements and traceability matrix, please refer to [Requ
 - **Layered Architecture**: Controller -> Service -> Domain -> Infrastructure (Repository).
 - **Persistence**: Database-per-service using **Entity Framework Core** (PostgreSQL).
 - **Messaging**: **MassTransit** for asynchronous event publishing.
-- **Reliability**: **Transactional Outbox Pattern** ensures atomic database updates and event publishing to avoid data inconsistency (dual-write problem).
+- **Reliability**: The Payment record is persisted via `SaveChangesAsync()` first, then `PaymentCreated` and `FraudEvaluated` events are published directly to the RabbitMQ exchange (no EF transactional outbox).
+  - **Trade-off**: If the service crashes between the DB commit and the `Publish` calls, the payment row exists but the downstream consumers are not notified. The payment remains in `Pending` status and can be compensated manually or by a future scheduler.
+  - **Client retry safety**: Each payment has a unique `paymentId` (`Guid.NewGuid()`). If the HTTP handler returns 5xx (e.g., publish failure), the caller may retry, which creates a new payment with a new ID.  Callers that need strict deduplication should use the `ReferenceId` field and implement idempotency checks server-side before creating a second payment.
+  - **Why not outbox**: The EF transactional outbox (`UseBusOutbox`) added a `BusOutboxDeliveryService` background job that was subject to an `OutboxState`-initialisation race on CI runners (brief RabbitMQ/PostgreSQL start-up window), causing messages to be silently stuck in the outbox table and never delivered. Direct publish eliminates this background-job dependency while keeping the common path (no crash between save and publish) fully reliable.

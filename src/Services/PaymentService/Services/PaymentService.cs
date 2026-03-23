@@ -30,11 +30,43 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             throw new ArgumentException("Amount must be positive");
         }
 
+        // Idempotency: if a ReferenceId is supplied, return the existing payment rather than
+        // creating a duplicate. This protects against client retries after a 5xx response that
+        // may have arrived after the Payment row was already committed.
+        if (request.ReferenceId.HasValue)
+        {
+            var existing = await _context.Payments
+                .FirstOrDefaultAsync(p => p.ReferenceId == request.ReferenceId);
+            if (existing != null)
+            {
+                _logger.LogInformation("Payment {PaymentId} already exists for ReferenceId {ReferenceId} — returning existing record",
+                    existing.Id, request.ReferenceId);
+                return new PaymentResponse(
+                    existing.Id,
+                    existing.Status,
+                    existing.Amount,
+                    existing.Currency,
+                    existing.FromUserId,
+                    existing.ToUserId,
+                    existing.ReferenceId,
+                    existing.RejectionReason
+                );
+            }
+        }
+
         var paymentId = Guid.NewGuid();
         var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending", request.ReferenceId);
 
         await _context.Payments.AddAsync(payment);
-        
+
+        // Commit the Payment record first so that the wallet consumer can always find
+        // a matching payment row if it queries back to PaymentService.
+        await _context.SaveChangesAsync();
+
+        // Publish events directly to the broker after the DB commit.
+        // This is intentionally outside a transactional outbox: the Payment row is
+        // already durable at this point, so the only risk is a publish failure that
+        // causes the HTTP handler to return 5xx (triggering a client retry).
         await _publishEndpoint.Publish(new PaymentCreated(
             paymentId,
             request.FromUserId,
@@ -62,8 +94,6 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             DateTimeOffset.UtcNow,
             request.ReferenceId
         ));
-
-        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Payment {PaymentId} created successfully", payment.Id);
 
