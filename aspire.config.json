@@ -1,0 +1,5 @@
+{
+    "appHost": {
+        "path": "src/AspireHost/MercuryPay.AppHost.csproj"
+    }
+}
