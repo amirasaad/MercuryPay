@@ -9,6 +9,50 @@
 <a name="1.7.0"></a>
 <a name="1.8.0"></a>
 <a name="1.9.0"></a>
+<a name="1.10.0"></a>
+# [1.10.0](https://github.com/amirasaad/MercuryPay/compare/v1.9.0...v1.10.0) (2026-03-23)
+
+
+### ✅ Tests
+
+* **integration:** align E2E and risk flows with dev auth ([4c0de82](https://github.com/amirasaad/MercuryPay/commit/4c0de82))
+* **integration:** harden auth and cold-start retries ([becee3a](https://github.com/amirasaad/MercuryPay/commit/becee3a))
+* **integration:** narrow the catch to expected transient exceptions at PostWithRetriesAsync ([53f5586](https://github.com/amirasaad/MercuryPay/commit/53f5586))
+* **lending-docs:** fix docs path casing ([395a65a](https://github.com/amirasaad/MercuryPay/commit/395a65a))
+
+
+### ✨ Features
+
+* **auth:** enforce auth on Payment endpoints ([f7b475b](https://github.com/amirasaad/MercuryPay/commit/f7b475b))
+* **event-bus:** centralize RabbitMQ wiring and add consumer definition ([ce0eb8e](https://github.com/amirasaad/MercuryPay/commit/ce0eb8e))
+* **indexes:** add Loan(UserId,CreatedAt) index with migration ([80c13a9](https://github.com/amirasaad/MercuryPay/commit/80c13a9))
+
+
+### 🐛 Bug Fixes
+
+* **apphost:** set explicit service URLs ([6fe204c](https://github.com/amirasaad/MercuryPay/commit/6fe204c))
+* **lending,payment:** harden PaymentService and LendingService domain invariants (#5) ([4eb47ed](https://github.com/amirasaad/MercuryPay/commit/4eb47ed)), closes [#5](https://github.com/amirasaad/MercuryPay/issues/5)
+
+
+### 💚 Continuous Integration
+
+* enforce coverage gates and add E2E job ([79f00ad](https://github.com/amirasaad/MercuryPay/commit/79f00ad))
+
+
+### 📝 Documentation
+
+* normalize documentation directory to lowercase `docs/` (#4) ([c33f7a8](https://github.com/amirasaad/MercuryPay/commit/c33f7a8)), closes [#4](https://github.com/amirasaad/MercuryPay/issues/4)
+
+
+### 🔨 Chores
+
+* **health:** allow anonymous /health and /alive ([577753b](https://github.com/amirasaad/MercuryPay/commit/577753b))
+
+
+### 🚀 Performance Improvements
+
+* **db:** speed up SafeMigrate retries in dev/test ([7089f19](https://github.com/amirasaad/MercuryPay/commit/7089f19))
+
 # [1.9.0](https://github.com/amirasaad/MercuryPay/compare/v1.8.0...v1.9.0) (2026-03-14)
 
 
