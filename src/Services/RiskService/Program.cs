@@ -39,13 +39,6 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.Configure<MassTransitHostOptions>(options =>
-{
-    options.WaitUntilStarted = true;
-    options.StartTimeout = TimeSpan.FromSeconds(60);
-    options.StopTimeout = TimeSpan.FromSeconds(30);
-});
-
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers();
