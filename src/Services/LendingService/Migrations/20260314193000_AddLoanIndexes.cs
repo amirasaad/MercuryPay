@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using MercuryPay.LendingService.Infrastructure;
 
 namespace MercuryPay.LendingService.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(LendingDbContext))]
+    [Migration("20260314193000_AddLoanIndexes")]
     public partial class AddLoanIndexes : Migration
     {
         /// <inheritdoc />
