@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\LendingService\MercuryPay.LendingService.csproj" />
+    <ProjectReference Include="..\..\..\src\Services\AgentPlatform\MercuryPay.AgentPlatform.csproj" />
     <ProjectReference Include="..\..\..\src\Services\PaymentService\MercuryPay.PaymentService.csproj" />
     <ProjectReference Include="..\..\..\src\BuildingBlocks\ServiceDefaults\MercuryPay.ServiceDefaults.csproj" />
   </ItemGroup>

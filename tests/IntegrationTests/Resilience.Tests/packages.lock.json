@@ -771,6 +771,14 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "mercurypay.agentplatform": {
+        "type": "Project",
+        "dependencies": {
+          "MassTransit.RabbitMQ": "[8.3.4, )",
+          "MercuryPay.ServiceDefaults": "[1.0.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[10.0.1, )"
+        }
+      },
       "mercurypay.lendingservice": {
         "type": "Project",
         "dependencies": {
