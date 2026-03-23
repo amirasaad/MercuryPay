@@ -23,7 +23,9 @@ var keycloak = builder.AddKeycloak("keycloak", 8080)
 
 var keycloakEndpoint = keycloak.GetEndpoint("http");
 
-var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice")
+var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("paymentservice", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(paymentDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
@@ -31,7 +33,9 @@ var paymentService = builder.AddProject<Projects.MercuryPay_PaymentService>("pay
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
-var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice")
+var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walletservice", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(walletDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
@@ -39,7 +43,9 @@ var walletService = builder.AddProject<Projects.MercuryPay_WalletService>("walle
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
-var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice")
+var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("lendingservice", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(lendingDb)
     .WithReference(rabbitmq)
     .WithReference(keycloak)
@@ -48,21 +54,27 @@ var lendingService = builder.AddProject<Projects.MercuryPay_LendingService>("len
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
-var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice")
+var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservice", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(riskDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
-builder.AddProject<Projects.MercuryPay_AgentPlatform>("agentplatform")
+builder.AddProject<Projects.MercuryPay_AgentPlatform>("agentplatform", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
-builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
+builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway", launchProfileName: null)
+    .WithHttpEndpoint()
+    .WithHttpsEndpoint()
     .WithReference(paymentService)
     .WithReference(walletService)
     .WithReference(lendingService);

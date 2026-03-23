@@ -37,7 +37,7 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         }
 
         var header = B64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");
-        var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
+        var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
         return $"{header}.{payload}.";
     }
 
@@ -95,10 +95,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         await app.StartAsync();
 
         // Wait for services
+        await resourceNotifications.WaitForResourceAsync("postgres", KnownResourceStates.Running);
+        await resourceNotifications.WaitForResourceAsync("messaging", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
+        await Task.Delay(2000);
 
-        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var paymentClient = app.CreateHttpClient("paymentservice", "https");
+        paymentClient.Timeout = TimeSpan.FromMinutes(2);
         paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_alice"));
 
         // Act: Create a low-value payment (should be approved)
@@ -142,10 +146,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
         await app.StartAsync();
 
+        await resourceNotifications.WaitForResourceAsync("postgres", KnownResourceStates.Running);
+        await resourceNotifications.WaitForResourceAsync("messaging", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
+        await Task.Delay(2000);
 
-        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var paymentClient = app.CreateHttpClient("paymentservice", "https");
+        paymentClient.Timeout = TimeSpan.FromMinutes(2);
         paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("user_charlie"));
 
         // Act: Create a high-value payment
@@ -188,10 +196,14 @@ public class RiskServiceEventFlowTests(ITestOutputHelper output)
         var resourceNotifications = app.Services.GetRequiredService<ResourceNotificationService>();
         await app.StartAsync();
 
+        await resourceNotifications.WaitForResourceAsync("postgres", KnownResourceStates.Running);
+        await resourceNotifications.WaitForResourceAsync("messaging", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotifications.WaitForResourceAsync("riskservice", KnownResourceStates.Running);
+        await Task.Delay(2000);
 
-        var paymentClient = app.CreateHttpClient("paymentservice", "http");
+        var paymentClient = app.CreateHttpClient("paymentservice", "https");
+        paymentClient.Timeout = TimeSpan.FromMinutes(2);
         paymentClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt("suspicious_actor_123"));
 
         // Act: Create payment from suspicious user
