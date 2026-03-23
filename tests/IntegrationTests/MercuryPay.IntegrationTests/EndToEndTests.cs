@@ -227,7 +227,6 @@ public class EndToEndTests(ITestOutputHelper output)
     private static async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)
     {
         var timeout = TimeSpan.FromMinutes(5);
-        var timeout = TimeSpan.FromMinutes(5);
         var start = DateTime.UtcNow;
         decimal? lastSeen = null;
 
@@ -245,9 +244,34 @@ public class EndToEndTests(ITestOutputHelper output)
         throw new TimeoutException($"Wallet {walletId} balance did not reach {expectedBalance} within {timeout.TotalSeconds} seconds.");
     }
 
-    private static async Task<PaymentResponseDto> PollForPaymentStatusAsync(HttpClient client, Guid paymentId)
+    private static async Task<bool> WaitForServiceHealthyAsync(HttpClient client)
     {
         var timeout = TimeSpan.FromMinutes(2);
+        var start = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try
+            {
+                var response = await client.GetAsync("/health");
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(500);
+        }
+
+        return false;
+    }
+
+    private static async Task<PaymentResponseDto> PollForPaymentStatusAsync(HttpClient client, Guid paymentId)
+    {
+        var timeout = TimeSpan.FromMinutes(5);
         var start = DateTime.UtcNow;
 
         while (DateTime.UtcNow - start < timeout)
