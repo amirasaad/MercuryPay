@@ -10,6 +10,7 @@
     <Project Path="src/BuildingBlocks/ServiceDefaults/MercuryPay.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/src/Services/">
+    <Project Path="src/Services/AgentPlatform/MercuryPay.AgentPlatform.csproj" />
     <Project Path="src/Services/LendingService/MercuryPay.LendingService.csproj" />
     <Project Path="src/Services/PaymentService/MercuryPay.PaymentService.csproj" />
     <Project Path="src/Services/RiskService/MercuryPay.RiskService.csproj" />

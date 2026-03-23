@@ -55,12 +55,17 @@ var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservi
     .WithEnvironment("Identity__Audience", "account")
     .WithEnvironment("Identity__DisableAuthValidation", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+builder.AddProject<Projects.MercuryPay_AgentPlatform>("agentplatform")
+    .WithReference(rabbitmq)
+    .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 
 builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway")
     .WithReference(paymentService)
     .WithReference(walletService)
     .WithReference(lendingService);
-
 builder.AddProject<Projects.MercuryPay_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithReference(paymentService)
