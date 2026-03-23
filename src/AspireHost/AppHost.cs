@@ -11,6 +11,7 @@ var paymentDb = postgres.AddDatabase("paymentdb");
 var walletDb = postgres.AddDatabase("walletdb");
 var lendingDb = postgres.AddDatabase("lendingdb");
 var riskDb = postgres.AddDatabase("riskdb");
+var agentDb = postgres.AddDatabase("agentdb");
 
 var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
@@ -66,6 +67,7 @@ var riskService = builder.AddProject<Projects.MercuryPay_RiskService>("riskservi
 builder.AddProject<Projects.MercuryPay_AgentPlatform>("agentplatform", launchProfileName: null)
     .WithHttpEndpoint()
     .WithHttpsEndpoint()
+    .WithReference(agentDb)
     .WithReference(rabbitmq)
     .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
     .WithEnvironment("Identity__Audience", "account")

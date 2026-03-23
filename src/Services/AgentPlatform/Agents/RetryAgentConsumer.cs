@@ -1,34 +1,28 @@
 using MassTransit;
+using MercuryPay.AgentPlatform.Infrastructure;
 using MercuryPay.BuildingBlocks.AgentPlatform;
 using MercuryPay.BuildingBlocks.Events;
+using Microsoft.EntityFrameworkCore;
 
 namespace MercuryPay.AgentPlatform.Agents;
 
 public sealed class RetryAgentConsumer(
     ILogger<RetryAgentConsumer> logger,
     IPublishEndpoint publishEndpoint,
-    IAgentTaskMetricSink metricSink
+    IAgentTaskMetricSink metricSink,
+    AgentPlatformDbContext dbContext
 ) : IConsumer<PaymentCaptureFailed>
 {
     private readonly ILogger<RetryAgentConsumer> _logger = logger;
     private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
     private readonly IAgentTaskMetricSink _metricSink = metricSink;
+    private readonly AgentPlatformDbContext _dbContext = dbContext;
 
-    private static readonly InMemoryIdempotencyStore IdempotencyStore = new();
     private static readonly RollingWindowCircuitBreaker CircuitBreaker = new(
         new CircuitBreakerOptions(
             FailureThreshold: 5,
             SamplingWindow: TimeSpan.FromMinutes(1),
             OpenDuration: TimeSpan.FromMinutes(2)
-        )
-    );
-    private static readonly AgentEventProcessor Processor = new(
-        agentType: "RetryAgent",
-        idempotencyStore: IdempotencyStore,
-        circuitBreaker: CircuitBreaker,
-        options: new AgentEventProcessorOptions(
-            LockTtl: TimeSpan.FromSeconds(30),
-            CompletedTtl: TimeSpan.FromHours(24)
         )
     );
 
@@ -39,82 +33,121 @@ public sealed class RetryAgentConsumer(
     );
 
     private const int MaxRetries = 3;
-    private static readonly Dictionary<Guid, int> RetryCounts = new();
-    private static readonly Lock RetryCountsGate = new();
 
     public async Task Consume(ConsumeContext<PaymentCaptureFailed> context)
     {
         var start = DateTimeOffset.UtcNow;
         var eventId = (context.MessageId ?? NewDeterministicId(context.Message)).ToString();
+        var success = false;
+        string? error = null;
+        var status = "Executed";
 
-        var outcome = await Processor.ProcessAsync(
-            eventId: eventId,
-            now: start,
-            handler: async ct =>
-            {
-                var retryAttempt = IncrementRetryCount(context.Message.CaptureAttemptId);
-
-                if (retryAttempt > MaxRetries)
-                {
-                    await _publishEndpoint.Publish(
-                        new PaymentRequiresReview(
-                            context.Message.PaymentId,
-                            context.Message.CaptureAttemptId,
-                            $"Max retries exceeded: {MaxRetries}. Last error: {context.Message.Reason}",
-                            DateTimeOffset.UtcNow
-                        ),
-                        ct
-                    );
-                    return;
-                }
-
-                var delay = RetryBackoff.GetDelay(retryAttempt, BackoffOptions);
-                var scheduledAt = DateTimeOffset.UtcNow.Add(delay);
-
-                await _publishEndpoint.Publish(
-                    new RetryPaymentCommand(
-                        context.Message.PaymentId,
-                        context.Message.CaptureAttemptId,
-                        retryAttempt,
-                        scheduledAt,
-                        context.Message.Reason
-                    ),
-                    ct
-                );
-            },
-            cancellationToken: context.CancellationToken
-        );
-
-        var end = DateTimeOffset.UtcNow;
-        await _metricSink.RecordAsync(
-            new AgentTaskMetric(
-                TaskId: Guid.NewGuid(),
-                AgentType: "RetryAgent",
-                StartTime: start,
-                EndTime: end,
-                Success: outcome.Status is AgentExecutionStatus.Executed or AgentExecutionStatus.DuplicateIgnored,
-                InputEventId: eventId,
-                Error: outcome.Error
-            ),
-            context.CancellationToken
-        );
-
-        _logger.LogInformation("RetryAgent processed eventId={EventId} status={Status}", eventId, outcome.Status);
-    }
-
-    private static int IncrementRetryCount(Guid captureAttemptId)
-    {
-        lock (RetryCountsGate)
+        try
         {
-            if (!RetryCounts.TryGetValue(captureAttemptId, out var current))
+            if (!CircuitBreaker.TryAcquirePermission(start))
             {
-                RetryCounts[captureAttemptId] = 1;
-                return 1;
+                status = "RejectedByCircuitBreaker";
+                return;
             }
 
-            var next = current + 1;
-            RetryCounts[captureAttemptId] = next;
-            return next;
+            var reason = context.Message.Reason ?? string.Empty;
+            if (reason.Contains("insufficient funds", StringComparison.OrdinalIgnoreCase))
+            {
+                await _publishEndpoint.Publish(
+                    new PaymentRequiresReview(
+                        context.Message.PaymentId,
+                        context.Message.CaptureAttemptId,
+                        $"Capture failed (non-retriable): {context.Message.Reason}",
+                        DateTimeOffset.UtcNow
+                    ),
+                    context.CancellationToken
+                );
+
+                await _dbContext.SaveChangesAsync(context.CancellationToken);
+                success = true;
+                return;
+            }
+
+            var attempt = await _dbContext.RetryAttempts.FirstOrDefaultAsync(
+                x => x.CaptureAttemptId == context.Message.CaptureAttemptId,
+                context.CancellationToken
+            );
+
+            if (attempt is null)
+            {
+                attempt = new RetryAttemptState
+                {
+                    CaptureAttemptId = context.Message.CaptureAttemptId,
+                    PaymentId = context.Message.PaymentId,
+                    RetryCount = 0,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+                _dbContext.RetryAttempts.Add(attempt);
+            }
+
+            attempt.RetryCount += 1;
+            attempt.LastError = context.Message.Reason;
+            attempt.UpdatedAt = DateTimeOffset.UtcNow;
+
+            if (attempt.RetryCount > MaxRetries)
+            {
+                await _publishEndpoint.Publish(
+                    new PaymentRequiresReview(
+                        context.Message.PaymentId,
+                        context.Message.CaptureAttemptId,
+                        $"Max retries exceeded: {MaxRetries}. Last error: {context.Message.Reason}",
+                        DateTimeOffset.UtcNow
+                    ),
+                    context.CancellationToken
+                );
+
+                await _dbContext.SaveChangesAsync(context.CancellationToken);
+                success = true;
+                return;
+            }
+
+            var delay = RetryBackoff.GetDelay(attempt.RetryCount, BackoffOptions);
+            var scheduledAt = DateTimeOffset.UtcNow.Add(delay);
+
+            await _publishEndpoint.Publish(
+                new RetryPaymentCommand(
+                    context.Message.PaymentId,
+                    context.Message.CaptureAttemptId,
+                    attempt.RetryCount,
+                    scheduledAt,
+                    context.Message.Reason ?? string.Empty
+                ),
+                context.CancellationToken
+            );
+
+            await _dbContext.SaveChangesAsync(context.CancellationToken);
+            CircuitBreaker.RecordSuccess(DateTimeOffset.UtcNow);
+            success = true;
+        }
+        catch (Exception ex)
+        {
+            CircuitBreaker.RecordFailure(DateTimeOffset.UtcNow);
+            error = ex.Message;
+            status = "Failed";
+            throw;
+        }
+        finally
+        {
+            var end = DateTimeOffset.UtcNow;
+            await _metricSink.RecordAsync(
+                new AgentTaskMetric(
+                    TaskId: Guid.NewGuid(),
+                    AgentType: "RetryAgent",
+                    StartTime: start,
+                    EndTime: end,
+                    Success: success,
+                    InputEventId: eventId,
+                    Error: error
+                ),
+                context.CancellationToken
+            );
+
+            _logger.LogInformation("RetryAgent processed eventId={EventId} status={Status}", eventId, status);
         }
     }
 
