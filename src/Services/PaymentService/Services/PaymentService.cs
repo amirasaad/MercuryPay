@@ -30,6 +30,30 @@ public class PaymentService(PaymentDbContext context, IPublishEndpoint publishEn
             throw new ArgumentException("Amount must be positive");
         }
 
+        // Idempotency: if a ReferenceId is supplied, return the existing payment rather than
+        // creating a duplicate. This protects against client retries after a 5xx response that
+        // may have arrived after the Payment row was already committed.
+        if (request.ReferenceId.HasValue)
+        {
+            var existing = await _context.Payments
+                .FirstOrDefaultAsync(p => p.ReferenceId == request.ReferenceId);
+            if (existing != null)
+            {
+                _logger.LogInformation("Payment {PaymentId} already exists for ReferenceId {ReferenceId} — returning existing record",
+                    existing.Id, request.ReferenceId);
+                return new PaymentResponse(
+                    existing.Id,
+                    existing.Status,
+                    existing.Amount,
+                    existing.Currency,
+                    existing.FromUserId,
+                    existing.ToUserId,
+                    existing.ReferenceId,
+                    existing.RejectionReason
+                );
+            }
+        }
+
         var paymentId = Guid.NewGuid();
         var payment = new Payment(paymentId, request.FromUserId, request.ToUserId, request.Amount, request.Currency, "Pending", request.ReferenceId);
 

@@ -128,16 +128,18 @@ public class EndToEndTests(ITestOutputHelper output)
         // 4. Create Payment
         // Before creating the payment, ensure BOTH service buses are fully connected:
         // - WalletService: its consumer queue must be bound to the PaymentCreated exchange
-        // - PaymentService: its bus must be connected so the outbox delivery job can send
-        //   the PaymentCreated message to RabbitMQ (PaymentCreated goes through the EF
-        //   transactional outbox; delivery requires an active bus connection)
+        // - PaymentService: its MassTransit bus must be connected so it can directly publish
+        //   the PaymentCreated event to RabbitMQ when the HTTP /Payments request is handled
+        //   (no EF transactional outbox is used for PaymentCreated in the PaymentService path)
         output.WriteLine("Waiting for WalletService MassTransit bus to be ready...");
         var walletHealthy = await WaitForServiceHealthyAsync(walletClient);
-        output.WriteLine($"WalletService health check: {(walletHealthy ? "Healthy" : "Timed out — proceeding anyway")}");
+        output.WriteLine($"WalletService health check: {(walletHealthy ? "Healthy" : "Timed out")}");
+        Assert.True(walletHealthy, "WalletService MassTransit bus must be healthy before creating payments.");
 
         output.WriteLine("Waiting for PaymentService MassTransit bus to be ready...");
         var paymentHealthy = await WaitForServiceHealthyAsync(paymentClient);
-        output.WriteLine($"PaymentService health check: {(paymentHealthy ? "Healthy" : "Timed out — proceeding anyway")}");
+        output.WriteLine($"PaymentService health check: {(paymentHealthy ? "Healthy" : "Timed out")}");
+        Assert.True(paymentHealthy, "PaymentService MassTransit bus must be healthy before creating payments.");
 
         output.WriteLine("Creating Payment...");
         var paymentRequest = new PaymentRequest(fromUserId, toUserId, paymentAmount, currency);
@@ -212,9 +214,12 @@ public class EndToEndTests(ITestOutputHelper output)
 
         if (createResponse.IsSuccessStatusCode)
         {
-            var wallet = await createResponse.Content.ReadFromJsonAsync<WalletDto>();
-            Assert.NotNull(wallet);
-            return wallet!;
+            using (createResponse)
+            {
+                var wallet = await createResponse.Content.ReadFromJsonAsync<WalletDto>();
+                Assert.NotNull(wallet);
+                return wallet!;
+            }
         }
 
         if (createResponse.StatusCode == HttpStatusCode.Conflict)
@@ -224,15 +229,19 @@ public class EndToEndTests(ITestOutputHelper output)
             // causing PostWithRetriesAsync to retry and produce a 409 on the second request.
             // Fetch the existing wallet via GET instead of failing the test.
             output.WriteLine($"{label} wallet already exists (409); fetching existing wallet.");
+            createResponse.Dispose();
             var existing = await walletClient.GetFromJsonAsync<List<WalletDto>>("/Wallets");
             var wallet = existing?.FirstOrDefault(w => w.Currency == currency);
             Assert.NotNull(wallet);
             return wallet!;
         }
 
-        var errorBody = await createResponse.Content.ReadAsStringAsync();
-        output.WriteLine($"{label} wallet creation failed: {errorBody}");
-        createResponse.EnsureSuccessStatusCode(); // always throws for non-success status codes
+        using (createResponse)
+        {
+            var errorBody = await createResponse.Content.ReadAsStringAsync();
+            output.WriteLine($"{label} wallet creation failed: {errorBody}");
+            createResponse.EnsureSuccessStatusCode(); // always throws for non-success status codes
+        }
         throw new InvalidOperationException("Unreachable"); // satisfies the compiler
     }
 
@@ -270,7 +279,7 @@ public class EndToEndTests(ITestOutputHelper output)
             try
             {
                 // /health is AllowAnonymous and includes all health checks (including MassTransit bus)
-                var response = await client.GetAsync("/health");
+                using var response = await client.GetAsync("/health");
                 if (response.IsSuccessStatusCode)
                     return true;
             }

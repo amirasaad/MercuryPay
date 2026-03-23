@@ -41,10 +41,11 @@ if (!builder.Environment.IsEnvironment("Testing"))
         // delivery service introduced a race window where the OutboxState could fail to
         // initialise (transient RabbitMQ / Postgres start-up race on CI) and leave
         // messages stuck in the outbox table indefinitely.
-        // The direct-publish approach is safe because:
+        // The direct-publish approach is acceptable here because:
         //   - The Payment record is persisted first (SaveChangesAsync).
-        //   - If Publish throws, the HTTP handler returns 5xx and the caller retries
-        //     (duplicate prevention is handled by idempotency keys / ReferenceId).
+        //   - If Publish throws, the HTTP handler returns 5xx and the caller retries;
+        //     callers are expected to use an idempotency key / ReferenceId to avoid
+        //     creating unintended duplicates on retry.
     });
 }
 
