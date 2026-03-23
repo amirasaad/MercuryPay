@@ -43,7 +43,6 @@ if (!builder.Environment.IsEnvironment("Testing"))
             {
                 o.QueryDelay = TimeSpan.FromSeconds(1);
                 o.UsePostgres();
-                o.UseBusOutbox();
             });
         }
     });
