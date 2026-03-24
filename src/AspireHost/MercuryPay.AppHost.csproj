@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Services\AgentPlatform\MercuryPay.AgentPlatform.csproj" />
     <ProjectReference Include="..\Services\PaymentService\MercuryPay.PaymentService.csproj" />
     <ProjectReference Include="..\Web\MercuryPay.Web.csproj" />
     <ProjectReference Include="..\Services\WalletService\MercuryPay.WalletService.csproj" />

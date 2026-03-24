@@ -35,17 +35,16 @@ if (!builder.Environment.IsEnvironment("Testing"))
     {
         x.AddConsumer<LoanApprovedConsumer, LoanApprovedConsumerDefinition>();
         x.AddConsumer<FraudEvaluatedConsumer>();
-        // Note: UseBusOutbox / AddEntityFrameworkOutbox is intentionally omitted.
-        // Publish calls in CreatePayment happen *after* SaveChangesAsync so the Payment
-        // row is committed before any event is dispatched.  Using a background outbox
-        // delivery service introduced a race window where the OutboxState could fail to
-        // initialise (transient RabbitMQ / Postgres start-up race on CI) and leave
-        // messages stuck in the outbox table indefinitely.
-        // The direct-publish approach is acceptable here because:
-        //   - The Payment record is persisted first (SaveChangesAsync).
-        //   - If Publish throws, the HTTP handler returns 5xx and the caller retries;
-        //     callers are expected to use an idempotency key / ReferenceId to avoid
-        //     creating unintended duplicates on retry.
+        x.AddConsumer<RetryPaymentCommandConsumer>();
+
+        if (!string.IsNullOrEmpty(connectionString))
+        {
+            x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+            {
+                o.QueryDelay = TimeSpan.FromSeconds(1);
+                o.UsePostgres();
+            });
+        }
     });
 }
 

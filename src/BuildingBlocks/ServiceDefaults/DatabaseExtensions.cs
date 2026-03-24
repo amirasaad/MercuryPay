@@ -35,7 +35,7 @@ public static class DatabaseExtensions
             // Outer retry loop for database connectivity/readiness
             var environment = services.GetRequiredService<IHostEnvironment>();
             var isFastFailEnv = environment.IsDevelopment() || environment.IsEnvironment("Testing");
-            var maxRetries = isFastFailEnv ? 12 : 30;
+            var maxRetries = 30;
             var delaySeconds = isFastFailEnv ? 2 : 5;
             
             for (int i = 0; i < maxRetries; i++)

@@ -129,6 +129,13 @@ public static class Extensions
             });
         });
 
+        builder.Services.Configure<MassTransitHostOptions>(options =>
+        {
+            options.WaitUntilStarted = true;
+            options.StartTimeout = TimeSpan.FromSeconds(60);
+            options.StopTimeout = TimeSpan.FromSeconds(30);
+        });
+
         return builder;
     }
 

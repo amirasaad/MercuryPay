@@ -23,11 +23,7 @@ public class EndToEndTests(ITestOutputHelper output)
         // Ensure resources are running
         appHost.Services.ConfigureHttpClientDefaults(client =>
         {
-            // Do NOT add AddStandardResilienceHandler() here. (See F-26 in docs/Findings-Backlog.md)
-            // Its attempt-timeout (default 10 s) silently retries POST /Wallets when the service is
-            // slow during startup.  If the server completed the first request before the timeout the
-            // retry arrives at a wallet that already exists and returns 409, failing the test.
-            // Retry logic is managed explicitly by PostWithRetriesAsync below.
+            client.AddStandardResilienceHandler();
             client.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -39,13 +35,14 @@ public class EndToEndTests(ITestOutputHelper output)
         
         await app.StartAsync();
 
-        // Wait for services and message broker to be ready
+        // Wait for services to be ready
+        await resourceNotificationService.WaitForResourceAsync("postgres", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("messaging", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("paymentservice", KnownResourceStates.Running);
         await resourceNotificationService.WaitForResourceAsync("walletservice", KnownResourceStates.Running);
 
-        var paymentClient = app.CreateHttpClient("paymentservice", "http");
-        var walletClient = app.CreateHttpClient("walletservice", "http");
+        var paymentClient = app.CreateHttpClient("paymentservice", "https");
+        var walletClient = app.CreateHttpClient("walletservice", "https");
 
         paymentClient.Timeout = TimeSpan.FromMinutes(5);
         walletClient.Timeout = TimeSpan.FromMinutes(5);
@@ -62,7 +59,7 @@ public class EndToEndTests(ITestOutputHelper output)
                     .Replace('/', '_');
             }
             var header = B64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");
-            var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
+            var payload = B64Url($"{{\"sub\":\"{subject}\",\"name\":\"{subject}\",\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier\":\"{subject}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()} }}");
             return $"{header}.{payload}.";
         }
 
@@ -106,13 +103,25 @@ public class EndToEndTests(ITestOutputHelper output)
         // 1. Create Sender Wallet
         output.WriteLine("Creating Sender Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
-        var fromWallet = await EnsureWalletAsync(walletClient, currency, "Sender");
+        var createFromWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = fromUserId, Currency = currency });
+        output.WriteLine($"Create Sender Wallet Response: {createFromWalletResponse.StatusCode}");
+        if (!createFromWalletResponse.IsSuccessStatusCode)
+        {
+            var error = await createFromWalletResponse.Content.ReadAsStringAsync();
+            output.WriteLine($"Error: {error}");
+        }
+        createFromWalletResponse.EnsureSuccessStatusCode();
+        var fromWallet = await createFromWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
+        Assert.NotNull(fromWallet);
 
         // 2. Credit Sender Wallet
         output.WriteLine("Crediting Sender Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(fromUserId));
-        var creditResponse = await PostWithRetriesAsync(walletClient, $"/Wallets/{fromWallet.Id}/credit",
-            new { Amount = initialCredit, TransactionId = Guid.NewGuid().ToString(), Description = "Initial credit" });
+        var creditResponse = await PostWithRetriesAsync(
+            walletClient,
+            $"/Wallets/{fromWallet.Id}/credit",
+            new { Amount = initialCredit, TransactionId = Guid.NewGuid().ToString(), Description = "Initial credit" }
+        );
         output.WriteLine($"Credit Response: {creditResponse.StatusCode}");
         creditResponse.EnsureSuccessStatusCode();
 
@@ -123,7 +132,10 @@ public class EndToEndTests(ITestOutputHelper output)
         // 3. Create Receiver Wallet
         output.WriteLine("Creating Receiver Wallet...");
         walletClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateDevJwt(toUserId));
-        var toWallet = await EnsureWalletAsync(walletClient, currency, "Receiver");
+        var createToWalletResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { UserId = toUserId, Currency = currency });
+        createToWalletResponse.EnsureSuccessStatusCode();
+        var toWallet = await createToWalletResponse.Content.ReadFromJsonAsync<WalletDto>();
+        Assert.NotNull(toWallet);
 
         // 4. Create Payment
         // Before creating the payment, ensure BOTH service buses are fully connected:
@@ -152,6 +164,15 @@ public class EndToEndTests(ITestOutputHelper output)
              output.WriteLine($"Payment Error: {error}");
         }
         createPaymentResponse.EnsureSuccessStatusCode();
+        var createdPayment = await createPaymentResponse.Content.ReadFromJsonAsync<PaymentResponseDto>();
+        Assert.NotNull(createdPayment);
+
+        var finalizedPayment = await PollForPaymentStatusAsync(paymentClient, createdPayment.Id);
+        output.WriteLine($"Payment Status: {finalizedPayment.Status}");
+        if (finalizedPayment.Status != "Approved")
+        {
+            throw new InvalidOperationException($"Payment {finalizedPayment.Id} was not approved. Status={finalizedPayment.Status} Reason={finalizedPayment.RejectionReason}");
+        }
 
         // 5. Poll for balance updates
         output.WriteLine("Polling for balance updates...");
@@ -203,49 +224,7 @@ public class EndToEndTests(ITestOutputHelper output)
         throw new TimeoutException($"POST {uri} did not succeed within timeout.");
     }
 
-    /// <summary>
-    /// Creates a wallet for the currently-authenticated user, or returns the existing one if it was
-    /// already created (e.g., by an infrastructure-level retry after a TCP connection drop).
-    /// </summary>
-    private async Task<WalletDto> EnsureWalletAsync(HttpClient walletClient, string currency, string label)
-    {
-        var createResponse = await PostWithRetriesAsync(walletClient, "/Wallets", new { Currency = currency });
-        output.WriteLine($"Create {label} Wallet Response: {createResponse.StatusCode}");
-
-        if (createResponse.IsSuccessStatusCode)
-        {
-            using (createResponse)
-            {
-                var wallet = await createResponse.Content.ReadFromJsonAsync<WalletDto>();
-                Assert.NotNull(wallet);
-                return wallet!;
-            }
-        }
-
-        if (createResponse.StatusCode == HttpStatusCode.Conflict)
-        {
-            // The wallet was already created — most likely because a prior attempt succeeded on
-            // the server but the TCP connection dropped before the client received the 201,
-            // causing PostWithRetriesAsync to retry and produce a 409 on the second request.
-            // Fetch the existing wallet via GET instead of failing the test.
-            output.WriteLine($"{label} wallet already exists (409); fetching existing wallet.");
-            createResponse.Dispose();
-            var existing = await walletClient.GetFromJsonAsync<List<WalletDto>>("/Wallets");
-            var wallet = existing?.FirstOrDefault(w => w.Currency == currency);
-            Assert.NotNull(wallet);
-            return wallet!;
-        }
-
-        using (createResponse)
-        {
-            var errorBody = await createResponse.Content.ReadAsStringAsync();
-            output.WriteLine($"{label} wallet creation failed: {errorBody}");
-            createResponse.EnsureSuccessStatusCode(); // always throws for non-success status codes
-        }
-        throw new InvalidOperationException("Unreachable"); // satisfies the compiler
-    }
-
-    private async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)
+    private static async Task PollForBalanceAsync(HttpClient client, Guid walletId, decimal expectedBalance)
     {
         var timeout = TimeSpan.FromMinutes(5);
         var start = DateTime.UtcNow;
@@ -262,40 +241,54 @@ public class EndToEndTests(ITestOutputHelper output)
             await Task.Delay(1000);
         }
 
-        throw new TimeoutException($"Wallet {walletId} balance did not reach {expectedBalance} within {timeout.TotalSeconds} seconds. Last observed balance: {lastSeen?.ToString() ?? "none (never polled successfully)"}.");
+        throw new TimeoutException($"Wallet {walletId} balance did not reach {expectedBalance} within {timeout.TotalSeconds} seconds.");
     }
 
-    /// <summary>
-    /// Polls the /health endpoint until it returns a 200 OK (all health checks pass, including
-    /// the MassTransit bus health check), confirming that all consumer queues are bound.
-    /// Returns true if healthy within the timeout, false otherwise.
-    /// </summary>
-    private static async Task<bool> WaitForServiceHealthyAsync(HttpClient client, int timeoutSeconds = 120)
+    private static async Task<bool> WaitForServiceHealthyAsync(HttpClient client)
     {
-        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        var timeout = TimeSpan.FromMinutes(2);
         var start = DateTime.UtcNow;
+
         while (DateTime.UtcNow - start < timeout)
         {
             try
             {
-                // /health is AllowAnonymous and includes all health checks (including MassTransit bus)
-                using var response = await client.GetAsync("/health");
+                var response = await client.GetAsync("/health");
                 if (response.IsSuccessStatusCode)
+                {
                     return true;
+                }
             }
-            catch (HttpRequestException)
+            catch
             {
-                // Service not yet reachable — keep retrying
             }
-            catch (TaskCanceledException)
-            {
-                // Request timed out — keep retrying
-            }
-            await Task.Delay(2000);
+
+            await Task.Delay(500);
         }
+
         return false;
+    }
+
+    private static async Task<PaymentResponseDto> PollForPaymentStatusAsync(HttpClient client, Guid paymentId)
+    {
+        var timeout = TimeSpan.FromMinutes(5);
+        var start = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            var payment = await client.GetFromJsonAsync<PaymentResponseDto>($"/Payments/{paymentId}");
+            if (payment is not null && payment.Status != "Pending")
+            {
+                return payment;
+            }
+
+            await Task.Delay(500);
+        }
+
+        throw new TimeoutException($"Payment {paymentId} status did not finalize within {timeout.TotalSeconds} seconds.");
     }
 }
 
 public record WalletDto(Guid Id, string UserId, string Currency, decimal Balance);
 public record PaymentRequest(string FromUserId, string ToUserId, decimal Amount, string Currency);
+public record PaymentResponseDto(Guid Id, string Status, decimal Amount, string Currency, string FromUserId, string ToUserId, Guid? ReferenceId, string? RejectionReason = null);

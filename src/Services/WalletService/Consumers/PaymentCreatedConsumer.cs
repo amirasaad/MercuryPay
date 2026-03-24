@@ -71,9 +71,18 @@ public class PaymentCreatedConsumer(WalletDbContext context, IPublishEndpoint pu
             // Permanent business-rule failure — do not retry.
             _logger.LogWarning(ex, "Payment {PaymentId} rejected: insufficient funds in wallet {WalletId}",
                 message.PaymentId, fromWallet.Id);
-            // Publish PaymentFailed
-            // await _publishEndpoint.Publish(new PaymentFailed(...));
-            return;
+            var captureAttemptId = context.MessageId ?? Guid.NewGuid();
+            await _publishEndpoint.Publish(
+                new PaymentCaptureFailed(
+                    message.PaymentId,
+                    captureAttemptId,
+                    ex.Message,
+                    DateTimeOffset.UtcNow
+                ),
+                context.CancellationToken
+            );
+
+            await _context.SaveChangesAsync(context.CancellationToken);
         }
 
         // Persist the balance changes — any DB / infrastructure exception propagates so
