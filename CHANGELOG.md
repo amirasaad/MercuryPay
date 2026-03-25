@@ -10,6 +10,45 @@
 <a name="1.8.0"></a>
 <a name="1.9.0"></a>
 <a name="1.10.0"></a>
+<a name="1.11.0"></a>
+# [1.11.0](https://github.com/amirasaad/MercuryPay/compare/v1.10.0...v1.11.0) (2026-03-25)
+
+
+### ✅ Tests
+
+* add RetryAgent tests; stabilize E2E ([950a1ab](https://github.com/amirasaad/MercuryPay/commit/950a1ab))
+* add sqlite-backed retry-loop tests; stabilize startup ([2c18c8a](https://github.com/amirasaad/MercuryPay/commit/2c18c8a))
+* simplify integration test setup and reduce timeouts ([ab83dec](https://github.com/amirasaad/MercuryPay/commit/ab83dec))
+* stabilize distributed payment and risk flows ([29f4e27](https://github.com/amirasaad/MercuryPay/commit/29f4e27))
+
+
+### ✨ Features
+
+* **agent-platform:** add agentdb persistence, migrations, and consumers ([b23b123](https://github.com/amirasaad/MercuryPay/commit/b23b123))
+* **agent-platform:** add primitives + events; tweak bus startup ([9692f87](https://github.com/amirasaad/MercuryPay/commit/9692f87))
+* **agent-platform:** add service with RetryAgent and wire into Aspire host ([02e02ac](https://github.com/amirasaad/MercuryPay/commit/02e02ac))
+* **agent:** implement core building blocks for agent platform ([52e710c](https://github.com/amirasaad/MercuryPay/commit/52e710c))
+* **retry-loop:** publish capture failures and process RetryPaymentCommand ([0516b2a](https://github.com/amirasaad/MercuryPay/commit/0516b2a))
+
+
+### 🐛 Bug Fixes
+
+* **apphost:** allocate endpoints to avoid port conflicts ([aff19b8](https://github.com/amirasaad/MercuryPay/commit/aff19b8))
+* **lending:** sync migrations snapshot to remove pending model changes ([455cda7](https://github.com/amirasaad/MercuryPay/commit/455cda7))
+* **payment:** disable BusOutbox for HTTP-published events ([54b265f](https://github.com/amirasaad/MercuryPay/commit/54b265f))
+
+
+### 📝 Documentation
+
+* add AGENTS.md with Copilot instructions for Aspire ([90aff59](https://github.com/amirasaad/MercuryPay/commit/90aff59))
+* **agent:** add agent platform design document ([243f4dd](https://github.com/amirasaad/MercuryPay/commit/243f4dd))
+
+
+### 🔨 Chores
+
+* add Aspire configuration files for app host path ([37890c7](https://github.com/amirasaad/MercuryPay/commit/37890c7))
+* **risk:** wait for MassTransit bus to start ([30fdaf3](https://github.com/amirasaad/MercuryPay/commit/30fdaf3))
+
 # [1.10.0](https://github.com/amirasaad/MercuryPay/compare/v1.9.0...v1.10.0) (2026-03-23)
 
 
