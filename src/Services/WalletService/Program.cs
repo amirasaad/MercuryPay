@@ -35,6 +35,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
     {
         x.AddConsumer<PaymentCreatedConsumer, PaymentCreatedConsumerDefinition>();
         x.AddConsumer<LoanRepaymentRequestedConsumer>();
+        x.AddConsumer<FraudEvaluatedConsumer>();
         // Note: UseBusOutbox() is intentionally omitted here. PaymentCreatedConsumer does
         // not publish any events, so the EF transactional outbox / InboxState idempotency
         // layer adds SaveChangesAsync overhead without providing reliability benefits.
