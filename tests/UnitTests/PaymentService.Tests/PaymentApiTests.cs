@@ -173,7 +173,7 @@ public class DevAuthBypassSecurityTests
     public async Task DevAuthBypass_IsDisabled_WhenEnvironmentIsNotDevelopment(string environment)
     {
         // Arrange – simulate a misconfiguration where DisableAuthValidation=true is set
-        // in a non-Development environment. The bypass must have NO effect.
+        // in a non-Development environment. The app must fail fast.
         var mockPublish = new Mock<IPublishEndpoint>();
 
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -192,13 +192,12 @@ public class DevAuthBypassSecurityTests
             });
         });
 
-        using var client = factory.CreateClient();
-
-        // Act – request without any Authorization header (no bypass should inject a user)
-        var request = new PaymentRequest(100.00m, "USD", "user_a", "user_b", null);
-        var response = await client.PostAsJsonAsync("/payments", request);
-
-        // Assert – must be rejected; DevAuthBypassMiddleware must not inject default credentials
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        // Act + Assert
+        var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
+        {
+            using var client = factory.CreateClient();
+            await client.GetAsync("/");
+        });
+        Assert.Contains("DisableAuthValidation", exception.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

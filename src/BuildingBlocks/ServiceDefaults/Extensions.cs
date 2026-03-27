@@ -36,6 +36,11 @@ public static class Extensions
 
         var disableAuth = identitySection.GetValue<bool>("DisableAuthValidation");
 
+        if (disableAuth && !builder.Environment.IsDevelopment())
+        {
+            throw new InvalidOperationException("Identity:DisableAuthValidation may only be enabled in the Development environment.");
+        }
+
         // Prevent mapping "sub" claim to nameidentifier.
         // JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
 
