@@ -1,0 +1,177 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  namespace: mercurypay
+data:
+  mercury-realm.json: |
+    {
+      "realm": "mercury",
+      "enabled": true,
+      "users": [
+        {
+          "username": "alice",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Alice",
+          "lastName": "Smith",
+          "email": "alice@mercury.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "alice",
+              "temporary": false
+            }
+          ],
+          "realmRoles": [ "user" ]
+        },
+        {
+          "username": "admin",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Admin",
+          "lastName": "User",
+          "email": "admin@mercury.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "admin",
+              "temporary": false
+            }
+          ],
+          "realmRoles": [ "admin" ]
+        }
+      ],
+      "roles": {
+        "realm": [
+          { "name": "user", "description": "User role" },
+          { "name": "admin", "description": "Admin role" }
+        ]
+      },
+      "clients": [
+        {
+          "clientId": "web-app",
+          "enabled": true,
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "redirectUris": [ "*" ],
+          "webOrigins": [ "*" ]
+        },
+        {
+          "clientId": "lending-service",
+          "enabled": true,
+          "publicClient": false,
+          "secret": "lending-secret",
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": true,
+          "authorizationServicesEnabled": true
+        }
+      ]
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: mercurypay
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:26.0
+        args: ["start", "--http-enabled=true", "--http-port=8080", "--import-realm"]
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: KEYCLOAK_ADMIN
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: KEYCLOAK_ADMIN_PASSWORD
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL_HOST
+          value: postgres
+        - name: KC_DB_URL_DATABASE
+          value: keycloakdb
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: POSTGRES_USER
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: realm-import
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 6
+      volumes:
+      - name: realm-import
+        configMap:
+          name: keycloak-realm
+          items:
+          - key: mercury-realm.json
+            path: mercury-realm.json
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: mercurypay
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+

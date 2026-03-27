@@ -46,31 +46,18 @@ spec:
             secretKeyRef:
               name: mercurypay-secrets
               key: PAYMENT_DB_CONNECTION
-        - name: Redis__Host
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: REDIS_HOST
-        - name: Redis__Port
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: REDIS_PORT
-        - name: Services__WalletServiceUrl
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: WALLET_SERVICE_URL
-        - name: Services__RiskServiceUrl
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: RISK_SERVICE_URL
-        - name: JWT__SecretKey
+        - name: ConnectionStrings__messaging
           valueFrom:
             secretKeyRef:
               name: mercurypay-secrets
-              key: JWT_SECRET_KEY
+              key: MESSAGING_CONNECTION
+        - name: Identity__Authority
+          valueFrom:
+            configMapKeyRef:
+              name: mercurypay-config
+              key: KEYCLOAK_AUTHORITY
+        - name: Identity__Audience
+          value: "account"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           valueFrom:
             configMapKeyRef:
@@ -87,7 +74,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /health/live
+            path: /alive
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -95,7 +82,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: /health
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5

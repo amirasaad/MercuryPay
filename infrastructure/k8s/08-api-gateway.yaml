@@ -39,31 +39,21 @@ spec:
             configMapKeyRef:
               name: mercurypay-config
               key: ASPNETCORE_ENVIRONMENT
-        - name: Services__PaymentServiceUrl
+        - name: Identity__Authority
           valueFrom:
             configMapKeyRef:
               name: mercurypay-config
-              key: PAYMENT_SERVICE_URL
-        - name: Services__WalletServiceUrl
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: WALLET_SERVICE_URL
-        - name: Services__LendingServiceUrl
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: LENDING_SERVICE_URL
-        - name: Services__RiskServiceUrl
-          valueFrom:
-            configMapKeyRef:
-              name: mercurypay-config
-              key: RISK_SERVICE_URL
-        - name: JWT__SecretKey
-          valueFrom:
-            secretKeyRef:
-              name: mercurypay-secrets
-              key: JWT_SECRET_KEY
+              key: KEYCLOAK_AUTHORITY
+        - name: Identity__Audience
+          value: "account"
+        - name: ReverseProxy__Clusters__paymentservice__Destinations__d1__Address
+          value: "http://payment-service"
+        - name: ReverseProxy__Clusters__walletservice__Destinations__d1__Address
+          value: "http://wallet-service"
+        - name: ReverseProxy__Clusters__lendingservice__Destinations__d1__Address
+          value: "http://lending-service"
+        - name: ReverseProxy__Clusters__riskservice__Destinations__d1__Address
+          value: "http://risk-service"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           valueFrom:
             configMapKeyRef:
@@ -80,7 +70,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /alive
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10

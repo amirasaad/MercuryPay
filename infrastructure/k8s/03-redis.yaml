@@ -2,59 +2,69 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis
+  name: messaging
   namespace: mercurypay
   labels:
-    app: redis
+    app: messaging
 spec:
-  clusterIP: None  # Headless service for StatefulSet
+  clusterIP: None
   selector:
-    app: redis
+    app: messaging
   ports:
-  - name: redis
-    port: 6379
-    targetPort: 6379
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+  - name: management
+    port: 15672
+    targetPort: 15672
 
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: redis
+  name: messaging
   namespace: mercurypay
 spec:
-  serviceName: redis
+  serviceName: messaging
   replicas: 1
   selector:
     matchLabels:
-      app: redis
+      app: messaging
   template:
     metadata:
       labels:
-        app: redis
+        app: messaging
     spec:
       containers:
-      - name: redis
-        image: redis:7-alpine
-        command:
-          - redis-server
-          - "--appendonly"
-          - "yes"
-          - "--appendfsync"
-          - "everysec"
+      - name: rabbitmq
+        image: rabbitmq:3.13-management
         ports:
-        - containerPort: 6379
-          name: redis
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: RABBITMQ_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mercurypay-secrets
+              key: RABBITMQ_PASSWORD
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "256Mi"
+            cpu: "200m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "1Gi"
+            cpu: "1000m"
         livenessProbe:
           exec:
             command:
-            - redis-cli
+            - rabbitmq-diagnostics
             - ping
           initialDelaySeconds: 15
           periodSeconds: 10
@@ -63,17 +73,17 @@ spec:
         readinessProbe:
           exec:
             command:
-            - redis-cli
-            - ping
+            - rabbitmq-diagnostics
+            - check_running
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 2
         volumeMounts:
-        - name: redis-data
-          mountPath: /data
+        - name: messaging-data
+          mountPath: /var/lib/rabbitmq
   volumeClaimTemplates:
   - metadata:
-      name: redis-data
+      name: messaging-data
     spec:
       accessModes: [ "ReadWriteOnce" ]
       storageClassName: standard

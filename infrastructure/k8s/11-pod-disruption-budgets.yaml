@@ -74,10 +74,22 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: redis-pdb
+  name: messaging-pdb
   namespace: mercurypay
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: redis
+      app: messaging
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: keycloak-pdb
+  namespace: mercurypay
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: keycloak
