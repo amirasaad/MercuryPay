@@ -71,57 +71,124 @@ public class WalletService(WalletDbContext context, ILogger<WalletService> logge
     public void CreditWallet(Guid id, decimal amount, string transactionId, string description)
     {
         _logger.LogInformation("Crediting wallet {WalletId} with amount {Amount}", id, amount);
-        
-        var domainWallet = _context.Wallets
-            .Include(w => w.Ledger.Where(e => e.TransactionId == transactionId))
-            .FirstOrDefault(w => w.Id == id);
-        if (domainWallet == null) 
+
+        const int maxRetries = 5;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            _logger.LogWarning("Wallet {WalletId} not found for credit operation", id);
-            throw new KeyNotFoundException("Wallet not found");
+            try
+            {
+                var domainWallet = _context.Wallets
+                    .Include(w => w.Ledger.Where(e => e.TransactionId == transactionId))
+                    .FirstOrDefault(w => w.Id == id);
+                if (domainWallet == null)
+                {
+                    _logger.LogWarning("Wallet {WalletId} not found for credit operation", id);
+                    throw new KeyNotFoundException("Wallet not found");
+                }
+
+                domainWallet.Credit(amount, transactionId, description);
+                _context.SaveChanges();
+
+                _logger.LogInformation("Wallet {WalletId} credited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < maxRetries)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Concurrency conflict while crediting wallet {WalletId} (attempt {Attempt}/{MaxRetries}). Retrying...",
+                    id,
+                    attempt,
+                    maxRetries
+                );
+                _context.ChangeTracker.Clear();
+            }
         }
 
-        domainWallet.Credit(amount, transactionId, description);
-        _context.SaveChanges();
-        
-        _logger.LogInformation("Wallet {WalletId} credited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+        throw new InvalidOperationException($"Failed to credit wallet '{id}' due to repeated concurrency conflicts.");
     }
 
     public void DebitWallet(Guid id, decimal amount)
     {
         _logger.LogInformation("Debiting wallet {WalletId} with amount {Amount}", id, amount);
-        
-        var domainWallet = _context.Wallets.Include(w => w.Ledger).FirstOrDefault(w => w.Id == id);
-        if (domainWallet == null) 
+
+        var transactionId = Guid.NewGuid().ToString();
+
+        const int maxRetries = 5;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            _logger.LogWarning("Wallet {WalletId} not found for debit operation", id);
-            throw new KeyNotFoundException("Wallet not found");
+            try
+            {
+                var domainWallet = _context.Wallets.Include(w => w.Ledger).FirstOrDefault(w => w.Id == id);
+                if (domainWallet == null)
+                {
+                    _logger.LogWarning("Wallet {WalletId} not found for debit operation", id);
+                    throw new KeyNotFoundException("Wallet not found");
+                }
+
+                domainWallet.Debit(amount, transactionId, "Manual Debit");
+                _context.SaveChanges();
+
+                _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < maxRetries)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Concurrency conflict while debiting wallet {WalletId} (attempt {Attempt}/{MaxRetries}). Retrying...",
+                    id,
+                    attempt,
+                    maxRetries
+                );
+                _context.ChangeTracker.Clear();
+            }
         }
 
-        domainWallet.Debit(amount, Guid.NewGuid().ToString(), "Manual Debit");
-        _context.SaveChanges();
-        
-        _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+        throw new InvalidOperationException($"Failed to debit wallet '{id}' due to repeated concurrency conflicts.");
     }
 
     public async Task DebitWalletAsync(Guid id, decimal amount, bool saveChanges = true)
     {
         _logger.LogInformation("Debiting wallet {WalletId} with amount {Amount}", id, amount);
-        
-        var domainWallet = await _context.Wallets.Include(w => w.Ledger).FirstOrDefaultAsync(w => w.Id == id);
-        if (domainWallet == null) 
+
+        var transactionId = Guid.NewGuid().ToString();
+
+        const int maxRetries = 5;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            _logger.LogWarning("Wallet {WalletId} not found for debit operation", id);
-            throw new KeyNotFoundException("Wallet not found");
+            try
+            {
+                var domainWallet = await _context.Wallets.Include(w => w.Ledger).FirstOrDefaultAsync(w => w.Id == id);
+                if (domainWallet == null)
+                {
+                    _logger.LogWarning("Wallet {WalletId} not found for debit operation", id);
+                    throw new KeyNotFoundException("Wallet not found");
+                }
+
+                domainWallet.Debit(amount, transactionId, "Manual Debit");
+
+                if (saveChanges)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < maxRetries)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Concurrency conflict while debiting wallet {WalletId} (attempt {Attempt}/{MaxRetries}). Retrying...",
+                    id,
+                    attempt,
+                    maxRetries
+                );
+                _context.ChangeTracker.Clear();
+            }
         }
 
-        domainWallet.Debit(amount, Guid.NewGuid().ToString(), "Manual Debit");
-        
-        if (saveChanges)
-        {
-            await _context.SaveChangesAsync();
-        }
-        
-        _logger.LogInformation("Wallet {WalletId} debited successfully. New Balance: {Balance}", id, domainWallet.Balance);
+        throw new InvalidOperationException($"Failed to debit wallet '{id}' due to repeated concurrency conflicts.");
     }
 }
