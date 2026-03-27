@@ -1,5 +1,11 @@
 module.exports = {
-  extends: ['@commitlint/config-conventional', 'commitlint-config-gitmoji'],
+  extends: ['@commitlint/config-conventional', 'gitmoji'],
+  parserPreset: {
+    parserOpts: {
+      headerPattern: /^(:\w+:)\s(\w+)(?:\(([^)]+)\))?:\s(.+)$/,
+      headerCorrespondence: ['gitmoji', 'type', 'scope', 'subject']
+    }
+  },
   rules: {
     'header-max-length': [2, 'always', 100],
     'type-empty': [2, 'never'],
@@ -23,6 +29,6 @@ module.exports = {
         'infra'
       ]
     ],
-    'use-gitmoji': [2, 'always']
+    'start-with-gitmoji': [2, 'always']
   }
 };
