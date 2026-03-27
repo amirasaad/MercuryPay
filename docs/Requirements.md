@@ -24,7 +24,7 @@ MercuryPay is an intelligent financial orchestration platform designed to handle
 - **CON-001**: The system MUST be built using .NET 8+ and .NET Aspire for orchestration.
 - **CON-002**: The system MUST run on containerized infrastructure (Docker/Kubernetes).
 - **CON-003**: The system MUST adhere to ISO 4217 for currency codes.
-- **CON-004**: The system MUST use RabbitMQ (via MassTransit) as its message broker. *(Note: README currently states Redis Streams — this is a documentation mismatch. Redis Streams references in README must be updated to reflect the actual RabbitMQ/MassTransit transport.)*
+- **CON-004**: The system MUST use RabbitMQ (via MassTransit) as its message broker.
 
 ### 3.2 Assumptions
 
@@ -35,14 +35,14 @@ MercuryPay is an intelligent financial orchestration platform designed to handle
 
 - **DEP-001**: **Identity Service**: Required for validating user tokens (OAuth2/OIDC).
 - **DEP-002**: **PostgreSQL**: Primary data store for transactional data.
-- **DEP-003**: **RabbitMQ** (via MassTransit): Message broker for asynchronous event-driven communication. *(README currently lists Redis Streams — this is a known documentation mismatch tracked in the findings backlog.)*
+- **DEP-003**: **RabbitMQ** (via MassTransit): Message broker for asynchronous event-driven communication.
 
 ### 3.4 Risks
 
 - **RISK-001**: **Concurrency**: High concurrency on wallet updates may lead to race conditions. *Mitigation*: Optimistic concurrency control and idempotent ledger design. *Status*: **Concurrency token not yet implemented** — tracked in PR #1 (WalletService hardening).
 - **RISK-002**: **Network Latency**: Distributed transactions across services may exceed latency targets. *Mitigation*: Asynchronous processing for non-critical steps.
 - **RISK-003**: **Data Consistency**: Eventual consistency models may lead to temporary balance discrepancies. *Mitigation*: Reconciliation jobs and Saga pattern implementation.
-- **RISK-004**: **Documentation Drift**: README and architecture docs describe Redis Streams; implementation uses RabbitMQ/MassTransit. *Mitigation*: Update README and architecture diagrams to reflect actual transport.
+- **RISK-004**: **Documentation Drift**: Documentation may drift from implementation. *Mitigation*: Keep README and architecture diagrams aligned with the actual transport and deployments.
 - **RISK-005**: **API Gateway Placeholder**: The `ApiGateway` project currently serves only a Hello World response; rate limiting, edge auth, and service proxying are not implemented. *Mitigation*: Implement a real YARP-based gateway baseline (see REQ-GW-001 through REQ-GW-005).
 - **RISK-006**: **Development Auth Bypass**: `Identity:DisableAuthValidation=true` disables all token validation in development, which could leak into staging/production. *Mitigation*: Restrict bypass to development environment with explicit startup warnings; add guardrail tests.
 - **RISK-007**: **Wallet Idempotency Gap**: Service methods generate random transaction IDs, which defeats retry idempotency. *Mitigation*: Require stable caller-provided idempotency keys and enforce uniqueness at the database layer.

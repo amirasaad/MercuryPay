@@ -6,7 +6,7 @@ Intelligent financial orchestration platform for payments, wallets, lending, and
 
 ```bash
 # Run the entire platform
-dotnet run --project src/MercuryPay.AppHost
+dotnet run --project src/AspireHost/MercuryPay.AppHost.csproj
 
 # Open Aspire Dashboard (auto-launches)
 # https://localhost:17225
@@ -34,7 +34,7 @@ MercuryPay is a cloud-native distributed platform that demonstrates:
 - Payment processing and settlement
 - Wallet and ledger management
 - Loan lifecycle orchestration
-- Event-driven communication via Redis Streams
+- Event-driven communication via RabbitMQ (MassTransit)
 - AI agents for fraud analysis and reconciliation
 - Full observability through .NET Aspire
 
@@ -46,7 +46,7 @@ Aspire provides:
 
 - **Service orchestration** — Start all services with one command
 - **Service discovery** — Services reference each other by logical name
-- **Infrastructure wiring** — Redis, PostgreSQL, message brokers declared in code
+- **Infrastructure wiring** — PostgreSQL, RabbitMQ, and Keycloak declared in code
 - **Built-in observability** — Traces, metrics, and logs in the Aspire dashboard
 - **Developer-time orchestration** — No Docker Compose or Kubernetes needed locally
 
@@ -59,8 +59,8 @@ Payment[Payment Service]
 Wallet[Wallet Service]
 Lending[Lending Service]
 Risk[Risk Service]
-EventBus[Redis Streams]
-Cache[Redis Cache]
+EventBus[RabbitMQ]
+IdP[Keycloak]
 Db[PostgreSQL]
 
 AppHost --> Payment
@@ -71,10 +71,9 @@ AppHost --> Risk
 Payment --> EventBus
 Wallet --> EventBus
 Lending --> EventBus
-EventBus --> Risk
+Risk --> EventBus
 
-Payment --> Cache
-Wallet --> Cache
+AppHost --> IdP
 Payment --> Db
 Wallet --> Db
 Lending --> Db
@@ -106,7 +105,7 @@ Each service:
 
 - Owns its own database (database-per-service)
 - Uses idempotency keys for safe retries
-- Publishes domain events to Redis Streams
+- Publishes domain events to RabbitMQ
 - Consumes events idempotently
 
 ## Event-Driven Design
@@ -129,14 +128,14 @@ sequenceDiagram
 participant Client
 participant Payment as PaymentService
 participant Db as PostgreSQL
-participant Stream as Redis Streams
+participant Bus as RabbitMQ
 participant Risk as RiskService
 
 Client->>Payment: POST /payments
 Payment->>Db: Save payment
-Payment->>Stream: Publish PaymentCreated
-Stream->>Risk: Deliver PaymentCreated
-Risk->>Stream: Publish FraudEvaluated
+Payment->>Bus: Publish PaymentCreated
+Bus->>Risk: Deliver PaymentCreated
+Risk->>Bus: Publish FraudEvaluated
 ```
 
 ## Distributed Patterns
@@ -175,9 +174,9 @@ Access at `https://localhost:17225` when running.
 |----------------|-----------------------------------|
 | Orchestration  | .NET Aspire                       |
 | Backend        | .NET 10, ASP.NET Core Minimal APIs|
-| Messaging      | Redis Streams                     |
+| Messaging      | RabbitMQ (MassTransit)            |
 | Database       | PostgreSQL                        |
-| Cache          | Redis                             |
+| Identity       | Keycloak (OIDC)                   |
 | Observability  | OpenTelemetry (via Aspire)        |
 | AI Agents      | Python / Semantic Kernel          |
 
@@ -188,25 +187,19 @@ flowchart TD
 repo[mercury-pay]
 
 repo --> src[src]
-src --> apphost[MercuryPay.AppHost - Aspire orchestrator]
-src --> defaults[MercuryPay.ServiceDefaults - shared Aspire config]
-src --> payment[MercuryPay.PaymentService - Payments context]
-src --> wallet[MercuryPay.WalletService - Wallet context]
-src --> lending[MercuryPay.LendingService - Lending context]
-src --> risk[MercuryPay.RiskService - Risk context]
-
-repo --> contracts[contracts]
-contracts --> sharedContracts[MercuryPay.Contracts - shared event contracts]
+src --> aspireHost[src/AspireHost - Aspire orchestrator]
+src --> apiGateway[src/ApiGateway - Gateway (YARP)]
+src --> defaults[src/BuildingBlocks/ServiceDefaults - shared hosting defaults]
+src --> services[src/Services - domain microservices]
+src --> web[src/Web - UI]
 
 repo --> tests[tests]
-tests --> integrationTests[MercuryPay.IntegrationTests - integration tests]
+tests --> unitTests[Unit tests]
+tests --> integrationTests[Integration tests (Aspire testing harness)]
+tests --> e2eTests[E2E tests]
 
 repo --> docs[docs]
-docs --> architecture[architecture.md]
-docs --> eventflows[event-flows.md]
-docs --> decisions[decisions]
-decisions --> adr1[0001-use-aspire.md]
-decisions --> adr2[0002-event-bus-choice.md]
+repo --> infrastructure[infrastructure]
 
 repo --> readme[README.md]
 ```
@@ -216,18 +209,18 @@ repo --> readme[README.md]
 ### Prerequisites
 
 - .NET 10 SDK
-- Docker (for Redis and PostgreSQL containers)
+- Docker (for PostgreSQL, RabbitMQ, and Keycloak containers via Aspire)
 
 ### Run Locally
 
 ```bash
 # Start all services with Aspire
-dotnet run --project src/MercuryPay.AppHost
+dotnet run --project src/AspireHost/MercuryPay.AppHost.csproj
 ```
 
 Aspire will:
 
-1. Start Redis and PostgreSQL containers
+1. Start PostgreSQL, RabbitMQ, and Keycloak containers
 2. Launch all microservices
 3. Open the Aspire dashboard
 
@@ -240,9 +233,8 @@ dotnet test
 ## Security
 
 - JWT authentication for API endpoints
-- Service-to-service authentication via mTLS
-- API key rotation
-- Rate limiting at gateway level
+- OIDC identity provider via Keycloak
+- Development-only auth bypass for local testing (explicitly configured)
 
 ## License
 

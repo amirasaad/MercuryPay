@@ -48,16 +48,16 @@ C4Container
     Container(lendingService, "Lending Service", ".NET 8", "Loan origination")
     Container(riskService, "Risk Service", "Python/.NET", "Fraud detection")
     Container(agentPlatform, "Agent Platform", "Python", "AI agents")
-    Container(identityService, "Identity Service", ".NET 8", "Auth & API keys")
+    Container(identityService, "Identity Service", "Keycloak (OIDC)", "Auth & token issuance")
     
     ContainerDb(paymentDb, "Payment Database", "PostgreSQL", "Transactions")
     ContainerDb(walletDb, "Wallet Database", "PostgreSQL", "Balances, ledger")
     ContainerDb(lendingDb, "Lending Database", "PostgreSQL", "Loans, collateral")
     ContainerDb(riskDb, "Risk Database", "PostgreSQL", "Risk scores, rules")
     ContainerDb(agentDb, "Agent Database", "PostgreSQL", "Agent state, evaluations")
-    ContainerDb(identityDb, "Identity Database", "PostgreSQL", "Users, keys")
+    ContainerDb(identityDb, "Identity Database", "PostgreSQL", "Keycloak realm data")
     
-    Container(messageBus, "Message Bus", "Kafka/Redis Streams", "Event propagation")
+    Container(messageBus, "Message Bus", "RabbitMQ (MassTransit)", "Event propagation")
     Container(cache, "Cache", "Redis", "Session, rate limiting, idempotency")
     Container(aspireHost, ".NET Aspire Host", ".NET Aspire", "Orchestration, service discovery")
   }

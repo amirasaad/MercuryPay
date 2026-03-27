@@ -14,14 +14,14 @@ The March 2026 code review identified the following major categories of gaps bet
 
 | # | Category | Severity | Status |
 |---|----------|----------|--------|
-| F-01 | Documentation/README mismatch with implementation (Redis Streams vs RabbitMQ; project structure) | High | Open |
+| F-01 | Documentation/README mismatch with implementation (event bus + project structure) | High | **Fixed** |
 | F-02 | API Gateway is a placeholder (Hello World only; no YARP routes, no auth, no rate limiting) | High | Open |
 | F-03 | WalletService missing concurrency control (no row-version / optimistic locking on `Wallet`) | Critical | In Progress — PR #1 |
 | F-04 | WalletService missing unique `(UserId, Currency)` DB constraint | Critical | In Progress — PR #1 |
 | F-05 | WalletService idempotency relies on in-memory checks + random transaction IDs (no DB-level guarantee) | Critical | In Progress — PR #1 |
-| F-06 | `GET /wallets` is `[AllowAnonymous]` and has write side effects (auto-creates wallet) | High | Open |
-| F-07 | Wallet ownership not enforced (cross-user wallet access possible) | High | Open |
-| F-08 | `POST /wallets/{id}/credit` is under-protected and uses a raw decimal request body | High | Open |
+| F-06 | `GET /wallets` is `[AllowAnonymous]` and has write side effects (auto-creates wallet) | High | **Fixed** |
+| F-07 | Wallet ownership not enforced (cross-user wallet access possible) | High | **Fixed** |
+| F-08 | `POST /wallets/{id}/credit` is under-protected and uses a raw decimal request body | High | Partially Fixed |
 | F-09 | Shared auth bypass (`DisableAuthValidation`) can disable all JWT validation in dev; risk of leaking to other environments | High | Open |
 | F-10 | PaymentService: `Reject(reason)` ignores the rejection reason (auditability gap) | Medium | **Fixed** |
 | F-11 | PaymentService: no domain-level guards for positive amount, sender ≠ receiver, currency normalization | Medium | **Fixed** |
@@ -36,7 +36,7 @@ The March 2026 code review identified the following major categories of gaps bet
 | F-20 | Test coverage gaps: concurrency races, security/authz, distributed failure paths not covered | High | Partially Fixed |
 | F-21 | mTLS and encryption-at-rest claims in README/docs not verified in surfaced code | Medium | Open |
 | F-22 | Demo wallet auto-seed of 10,000,000 for `LendingService` in `PaymentCreatedConsumer` | Medium | Open |
-| F-23 | `Docs` and `docs` directories both exist (case-sensitivity footgun) | Low | Open |
+| F-23 | `Docs` and `docs` directories both exist (case-sensitivity footgun) | Low | Not Reproduced |
 | F-24 | `LendingService.CreateLoan` published `LoanCreated` before `SaveChangesAsync` — consumer could race and find no row | High | **Fixed** |
 | F-25 | `CreateWalletRequest.UserId` was non-nullable, causing `[ApiController]` model binding to reject wallet creation before claims-based auto-fill could run | High | **Fixed** |
 | F-26 | `AddStandardResilienceHandler()` in E2E test `ConfigureHttpClientDefaults` had a 10 s attempt-timeout that silently retried `POST /Wallets`; if the server completed the first request before the timeout, the retry returned 409 and the test failed | High | **Fixed** |
@@ -55,9 +55,8 @@ Issues are grouped by priority tier. Within each tier they are ordered by impact
 **Suggested issue title:** `docs: align README and architecture docs with actual implementation`
 
 **Description:**
-- README describes Redis Streams as the event transport; actual implementation uses RabbitMQ via MassTransit.
-- README project structure diagram lists `MercuryPay.AppHost`, `MercuryPay.PaymentService` etc., but actual `src/` contains `ApiGateway`, `AspireHost`, `BuildingBlocks`, `Services`, `Web`.
-- Both `docs/` and `docs/` directories exist, which is a case-sensitivity footgun on Linux CI.
+- README described Redis Streams as the event transport; implementation uses RabbitMQ via MassTransit.
+- README project structure diagram did not match the actual `src/` layout.
 
 **Acceptance criteria:**
 - README accurately describes the actual source tree and runtime transport.
