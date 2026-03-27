@@ -79,7 +79,12 @@ builder.AddProject<Projects.MercuryPay_ApiGateway>("apigateway", launchProfileNa
     .WithHttpsEndpoint()
     .WithReference(paymentService)
     .WithReference(walletService)
-    .WithReference(lendingService);
+    .WithReference(lendingService)
+    .WithReference(keycloak)
+    .WithEnvironment("Identity__Authority", $"{keycloakEndpoint}/realms/mercury")
+    .WithEnvironment("Identity__Audience", "account")
+    .WithEnvironment("Identity__DisableAuthValidation", "false")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
 builder.AddProject<Projects.MercuryPay_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithReference(paymentService)
