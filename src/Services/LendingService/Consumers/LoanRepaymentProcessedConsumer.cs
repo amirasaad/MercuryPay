@@ -13,7 +13,7 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
     public async Task Consume(ConsumeContext<LoanRepaymentProcessed> context)
     {
         var message = context.Message;
-        _logger.LogInformation("Processing repayment result for Loan {LoanId}, Amount: {Amount}, Success: {Success}", 
+        _logger.LogInformation("Processing repayment result for Loan {LoanId}, Amount: {Amount}, Success: {Success}",
             message.LoanId, message.Amount, message.Success);
 
         // Explicitly include RepaymentSchedule to ensure it's loaded
@@ -40,16 +40,32 @@ public class LoanRepaymentProcessedConsumer(LendingDbContext context, ILogger<Lo
                 loan.RepaymentSchedule != null, 
                 loan.RepaymentSchedule?.Installments?.Count ?? 0);
 
-            loan.ProcessRepayment(message.Amount);
-            _logger.LogInformation("Loan {LoanId} processed repayment of {Amount}", message.LoanId, message.Amount);
-            
-            // Force update to ensure EF Core detects changes in owned collection
-            _context.Update(loan);
+            try
+            {
+                loan.ProcessRepayment(message.Amount);
+                _logger.LogInformation("Loan {LoanId} processed repayment of {Amount}", message.LoanId, message.Amount);
+                
+                // Force update to ensure EF Core detects changes in owned collection
+                _context.Update(loan);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Ignoring repayment processed event for Loan {LoanId} due to invalid state transition. Current status: {Status}", message.LoanId, loan.Status);
+                return;
+            }
         }
         else
         {
-            loan.MarkAsRepaymentFailed();
-            _logger.LogWarning("Loan {LoanId} repayment failed: {Reason}", message.LoanId, message.FailureReason);
+            try
+            {
+                loan.MarkAsRepaymentFailed();
+                _logger.LogWarning("Loan {LoanId} repayment failed: {Reason}", message.LoanId, message.FailureReason);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Ignoring repayment failure event for Loan {LoanId} due to invalid state transition. Current status: {Status}", message.LoanId, loan.Status);
+                return;
+            }
         }
 
         await _context.SaveChangesAsync();

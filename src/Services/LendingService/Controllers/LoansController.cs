@@ -65,6 +65,7 @@ public class LoansController(ILendingService lendingService) : ControllerBase
     }
 
     [HttpGet("user/{userId}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetByUser(string userId)
     {
         var loans = await _lendingService.GetLoansByUser(userId);
@@ -79,7 +80,7 @@ public class LoansController(ILendingService lendingService) : ControllerBase
             loan.UserId,
             loan.Amount,
             loan.Currency,
-            loan.Status,
+            loan.Status.ToString(),
             loan.CreatedAt,
             loan.TermMonths,
             loan.AnnualInterestRate,

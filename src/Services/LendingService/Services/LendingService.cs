@@ -53,7 +53,7 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             throw new ArgumentException("Currency must be a valid ISO 4217 code (e.g. USD, EUR).");
         }
 
-        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, "Processing", DateTime.UtcNow, termMonths, DefaultAnnualInterestRate);
+        var loan = new Loan(Guid.NewGuid(), userId, amount, currency, LoanStatus.Processing, DateTime.UtcNow, termMonths, DefaultAnnualInterestRate);
         
         // Generate schedule immediately
         loan.GenerateRepaymentSchedule();
@@ -107,7 +107,7 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
             return false;
         }
 
-        if (loan.Status != "DisbursementFailed")
+        if (loan.Status != LoanStatus.DisbursementFailed)
         {
             _logger.LogWarning("Loan {LoanId} status is {Status}, cannot retry disbursement", loanId, loan.Status);
             return false;
@@ -147,7 +147,13 @@ public class LendingService(LendingDbContext context, ILogger<LendingService> lo
                 return false;
             }
 
-            if (loan.Status != "Approved" && loan.Status != "Active")
+            if (loan.Status == LoanStatus.RepaymentProcessing)
+            {
+                _logger.LogWarning("Loan {LoanId} is already in repayment processing", loanId);
+                return false;
+            }
+
+            if (loan.Status != LoanStatus.Approved && loan.Status != LoanStatus.Active)
             {
                 _logger.LogWarning("Loan {LoanId} status is {Status}, cannot repay", loanId, loan.Status);
                 return false;

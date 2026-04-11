@@ -12,7 +12,7 @@ public class LoanTests
         var userId = "user-123";
         var amount = 1000m;
         var currency = "USD";
-        var status = "Approved";
+        var status = LoanStatus.Approved;
         var createdAt = new DateTime(2024, 1, 1);
         var termMonths = 12;
         var annualInterestRate = 0.05m; // 5%
@@ -53,27 +53,28 @@ public class LoanTests
     [Fact]
     public void MarkAsFraudDetected_ShouldCancelAllPendingInstallments()
     {
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
         loan.GenerateRepaymentSchedule();
         loan.MarkAsFraudDetected();
         Assert.All(loan.RepaymentSchedule!.Installments, i =>
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
-        Assert.Equal("FraudDetected", loan.Status);
+        Assert.Equal(LoanStatus.FraudDetected, loan.Status);
     }
 
     [Fact]
     public void Loan_WhenAmountExceedsMaximum_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 100001m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+            new Loan(Guid.NewGuid(), "user-1", 100001m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m));
     }
 
     [Fact]
     public void ProcessRepayment_ShouldHandlePartialPayments()
     {
         // Arrange
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
         loan.GenerateRepaymentSchedule();
+        loan.MarkAsRepaymentProcessing();
         var firstInstallment = loan.RepaymentSchedule!.Installments.First();
         var paymentAmount = firstInstallment.TotalAmount / 2;
 
@@ -84,15 +85,16 @@ public class LoanTests
         var updatedInstallment = loan.RepaymentSchedule.Installments.First();
         Assert.Equal("PartiallyPaid", updatedInstallment.Status);
         Assert.Equal(paymentAmount, updatedInstallment.PaidAmount);
-        Assert.Equal("Active", loan.Status);
+        Assert.Equal(LoanStatus.Active, loan.Status);
     }
 
     [Fact]
     public void ProcessRepayment_ShouldHandleFullRepayment()
     {
         // Arrange
-        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", "Approved", DateTime.UtcNow, 1, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", LoanStatus.Approved, DateTime.UtcNow, 1, 0.05m);
         loan.GenerateRepaymentSchedule();
+        loan.MarkAsRepaymentProcessing();
         var totalAmount = loan.RepaymentSchedule!.Installments.Sum(i => i.TotalAmount);
 
         // Act
@@ -100,15 +102,16 @@ public class LoanTests
 
         // Assert
         Assert.All(loan.RepaymentSchedule.Installments, i => Assert.Equal("Paid", i.Status));
-        Assert.Equal("Repaid", loan.Status);
+        Assert.Equal(LoanStatus.Repaid, loan.Status);
     }
 
     [Fact]
     public void ProcessRepayment_ShouldHandleMultipleInstallmentsPayment()
     {
         // Arrange
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
         loan.GenerateRepaymentSchedule();
+        loan.MarkAsRepaymentProcessing();
         
         var firstInstallment = loan.RepaymentSchedule!.Installments[0];
         var secondInstallment = loan.RepaymentSchedule!.Installments[1];
@@ -122,15 +125,16 @@ public class LoanTests
         Assert.Equal("Paid", loan.RepaymentSchedule.Installments[0].Status);
         Assert.Equal("Paid", loan.RepaymentSchedule.Installments[1].Status);
         Assert.Equal("Pending", loan.RepaymentSchedule.Installments[2].Status);
-        Assert.Equal("Active", loan.Status);
+        Assert.Equal(LoanStatus.Active, loan.Status);
     }
 
     [Fact]
     public void ProcessRepayment_ShouldHandleOverpayment_ByMarkingAllPaid()
     {
         // Arrange
-        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", "Approved", DateTime.UtcNow, 1, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 100m, "USD", LoanStatus.Approved, DateTime.UtcNow, 1, 0.05m);
         loan.GenerateRepaymentSchedule();
+        loan.MarkAsRepaymentProcessing();
         var totalAmount = loan.RepaymentSchedule!.Installments.Sum(i => i.TotalAmount);
         var overpaymentAmount = totalAmount + 50m;
 
@@ -139,7 +143,7 @@ public class LoanTests
 
         // Assert
         Assert.All(loan.RepaymentSchedule.Installments, i => Assert.Equal("Paid", i.Status));
-        Assert.Equal("Repaid", loan.Status);
+        Assert.Equal(LoanStatus.Repaid, loan.Status);
         // Note: Current implementation swallows overpayment. 
         // In a real system, we might want to track this or refund it, but for now we ensure it doesn't break logic.
     }
@@ -150,29 +154,29 @@ public class LoanTests
     public void Loan_WhenAmountIsZero_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 0m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+            new Loan(Guid.NewGuid(), "user-1", 0m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m));
     }
 
     [Fact]
     public void Loan_WhenAmountIsNegative_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", -500m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m));
+            new Loan(Guid.NewGuid(), "user-1", -500m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m));
     }
 
     [Fact]
     public void Loan_WhenCurrencyIsEmpty_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "", "Approved", DateTime.UtcNow, 12, 0.05m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m));
         Assert.Throws<ArgumentException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "   ", "Approved", DateTime.UtcNow, 12, 0.05m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "   ", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m));
     }
 
     [Fact]
     public void Loan_Constructor_NormalizesCurrencyToUpperCase()
     {
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "usd", "Approved", DateTime.UtcNow, 12, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "usd", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
         Assert.Equal("USD", loan.Currency);
     }
 
@@ -180,21 +184,21 @@ public class LoanTests
     public void Loan_WhenAnnualInterestRateIsZero_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0m));
     }
 
     [Fact]
     public void Loan_WhenAnnualInterestRateIsNegative_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, -0.05m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, -0.05m));
     }
 
     [Fact]
     public void Loan_WhenAnnualInterestRateExceedsOne_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 1.01m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 1.01m));
     }
 
     [Fact]
@@ -202,14 +206,49 @@ public class LoanTests
     {
         // Catches the catastrophic bug where AnnualInterestRate=12 is passed instead of 0.12
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 12m));
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 12m));
     }
 
     [Fact]
     public void Loan_WhenAnnualInterestRateIsExactlyOne_DoesNotThrow()
     {
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 1.0m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 1.0m);
         Assert.Equal(1.0m, loan.AnnualInterestRate);
+    }
+
+    [Fact]
+    public void Loan_WhenTermMonthsIsZero_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 0, 0.05m));
+    }
+
+    [Fact]
+    public void Loan_WhenTermMonthsExceedsMaximum_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 121, 0.05m));
+    }
+
+    [Fact]
+    public void RetryDisbursement_WhenNotInDisbursementFailed_ThrowsInvalidOperationException()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
+        Assert.Throws<InvalidOperationException>(() => loan.RetryDisbursement());
+    }
+
+    [Fact]
+    public void Approve_WhenNotInProcessingOrAlreadyApproved_ThrowsInvalidOperationException()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Active, DateTime.UtcNow, 12, 0.05m);
+        Assert.Throws<InvalidOperationException>(() => loan.Approve());
+    }
+
+    [Fact]
+    public void MarkAsRepaymentProcessing_WhenFraudDetected_ThrowsInvalidOperationException()
+    {
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.FraudDetected, DateTime.UtcNow, 12, 0.05m);
+        Assert.Throws<InvalidOperationException>(() => loan.MarkAsRepaymentProcessing());
     }
 
     // ── Installment domain methods ────────────────────────────────────────────

@@ -26,7 +26,21 @@ public class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> option
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, "user_123") };
+        var userId = Request.Headers.TryGetValue("X-Test-UserId", out var userValues)
+            ? userValues.FirstOrDefault() ?? "user_123"
+            : "user_123";
+
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+
+        if (Request.Headers.TryGetValue("X-Test-Role", out var roleValues))
+        {
+            var role = roleValues.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
+
         var identity = new ClaimsIdentity(claims, "Test");
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, "Test");
@@ -300,6 +314,65 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.All(updated!.RepaymentSchedule!.Installments, i =>
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
     }
+
+    [Fact]
+    public async Task RepayLoan_ReturnsBadRequest_WhenLoanIsFraudDetected()
+    {
+        var client = _factory.CreateClient();
+        var harness = _factory.Services.GetRequiredService<ITestHarness>();
+
+        var createRequest = new { UserId = "user_123", Amount = 2500.00m, Currency = "USD" };
+        var createResponse = await client.PostAsJsonAsync("/loans", createRequest);
+        createResponse.EnsureSuccessStatusCode();
+        var loan = await createResponse.Content.ReadFromJsonAsync<LoanResponse>();
+
+        // Ensure loan is Approved before fraud event to avoid race with LoanCreated approval
+        LoanResponse? approvedLoan = null;
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "Approved")
+            {
+                approvedLoan = l;
+                break;
+            }
+            await Task.Delay(200);
+        }
+        Assert.NotNull(approvedLoan);
+
+        await harness.Start();
+        try
+        {
+            await harness.Bus.Publish(new FraudEvaluated(Guid.NewGuid(), false, 97, "High risk", DateTimeOffset.UtcNow, loan!.Id));
+            var consumed = false;
+            for (int i = 0; i < 30; i++)
+            {
+                if (await harness.Consumed.Any<FraudEvaluated>()) { consumed = true; break; }
+                await Task.Delay(100);
+            }
+            Assert.True(consumed);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+
+        // Poll for FraudDetected
+        for (int i = 0; i < 30; i++)
+        {
+            var resp = await client.GetAsync($"/loans/{loan!.Id}");
+            var l = await resp.Content.ReadFromJsonAsync<LoanResponse>();
+            if (l!.Status == "FraudDetected")
+            {
+                break;
+            }
+            await Task.Delay(200);
+        }
+
+        var repayResponse = await client.PostAsJsonAsync($"/loans/{loan!.Id}/repay", new { Amount = 10m });
+        Assert.Equal(HttpStatusCode.BadRequest, repayResponse.StatusCode);
+    }
     [Fact]
     /// <summary>
     /// TEST-LEND-008: Enforce configurable maximum loan amount — exceeds max returns 400.
@@ -349,13 +422,15 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
     {
         // Arrange
         var client = _factory.CreateClient();
-        var userId = "user_123"; // Matches TestAuthHandler user
+        var userId = "user_123"; // Matches default TestAuthHandler user
         
         // Create 2 loans
         await client.PostAsJsonAsync("/loans", new { UserId = userId, Amount = 100.00m, Currency = "USD" });
         await client.PostAsJsonAsync("/loans", new { UserId = userId, Amount = 200.00m, Currency = "USD" });
 
         // Act
+        client.DefaultRequestHeaders.Remove("X-Test-Role");
+        client.DefaultRequestHeaders.Add("X-Test-Role", "admin");
         var response = await client.GetAsync($"/loans/user/{userId}");
 
         // Assert
@@ -364,6 +439,49 @@ public class LendingApiTests(WebApplicationFactory<Program> factory) : IClassFix
         Assert.NotNull(loans);
         Assert.True(loans.Count >= 2); // Might have loans from other tests if using shared db
         Assert.All(loans, l => Assert.Equal(userId, l.UserId));
+    }
+
+    [Fact]
+    public async Task GetLoansByUser_ReturnsForbidden_WhenCallerIsNotAdmin()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Remove("X-Test-Role");
+
+        var response = await client.GetAsync("/loans/user/user_123");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMyLoans_ReturnsOnlyAuthenticatedUsersLoans()
+    {
+        var client = _factory.CreateClient();
+
+        var userA = $"userA_{Guid.NewGuid():N}";
+        var userB = $"userB_{Guid.NewGuid():N}";
+
+        async Task CreateLoanForUserAsync(string userId, decimal amount)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/loans")
+            {
+                Content = JsonContent.Create(new { UserId = userId, Amount = amount, Currency = "USD" })
+            };
+            request.Headers.Add("X-Test-UserId", userId);
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+        }
+
+        await CreateLoanForUserAsync(userA, 100m);
+        await CreateLoanForUserAsync(userB, 200m);
+
+        using var listRequest = new HttpRequestMessage(HttpMethod.Get, "/loans");
+        listRequest.Headers.Add("X-Test-UserId", userA);
+        var listResponse = await client.SendAsync(listRequest);
+        listResponse.EnsureSuccessStatusCode();
+
+        var loans = await listResponse.Content.ReadFromJsonAsync<List<LoanResponse>>();
+        Assert.NotNull(loans);
+        Assert.All(loans, l => Assert.Equal(userA, l.UserId));
     }
     [Fact]
     /// <summary>

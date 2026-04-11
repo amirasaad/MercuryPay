@@ -19,7 +19,7 @@ public class FraudEvaluatedConsumerTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         await using var db = new LendingDbContext(options);
 
-        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+        var loan = new Loan(Guid.NewGuid(), "user-1", 1000m, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
         loan.GenerateRepaymentSchedule();
         db.Loans.Add(loan);
         await db.SaveChangesAsync();
@@ -45,7 +45,7 @@ public class FraudEvaluatedConsumerTests
 
         var updated = await db.Loans.Include(l => l.RepaymentSchedule)!.ThenInclude(s => s!.Installments)
             .FirstAsync(l => l.Id == loan.Id);
-        Assert.Equal("FraudDetected", updated.Status);
+        Assert.Equal(LoanStatus.FraudDetected, updated.Status);
         Assert.All(updated.RepaymentSchedule!.Installments, i =>
             Assert.True(i.Status == "Cancelled" || i.Status == "Paid"));
         Assert.Contains(published, e => e is LoanFraudDetected lf && lf.LoanId == loan.Id);

@@ -48,7 +48,7 @@ public class DisbursementFailureTests
             // Seed a Loan
             var dbContext = provider.GetRequiredService<LendingDbContext>();
             var loanId = Guid.NewGuid();
-            var loan = new Loan(loanId, "user_123", 1000, "USD", "Approved", DateTime.UtcNow, 12, 0.05m);
+            var loan = new Loan(loanId, "user_123", 1000, "USD", LoanStatus.Approved, DateTime.UtcNow, 12, 0.05m);
             dbContext.Loans.Add(loan);
             await dbContext.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ public class DisbursementFailureTests
             var updatedLoan = await checkContext.Loans.FindAsync(loanId);
             
             Assert.NotNull(updatedLoan);
-            Assert.Equal("DisbursementFailed", updatedLoan.Status);
+            Assert.Equal(LoanStatus.DisbursementFailed, updatedLoan.Status);
         }
         finally
         {

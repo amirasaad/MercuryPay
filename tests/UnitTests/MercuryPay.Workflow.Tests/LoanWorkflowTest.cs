@@ -91,7 +91,7 @@ public class LoanWorkflowTests
             var loan = await lendingService.CreateLoan(userId, amount, currency, termMonths);
 
             Assert.NotNull(loan);
-            Assert.Equal("Processing", loan.Status);
+            Assert.Equal(LoanStatus.Processing, loan.Status);
 
             // Wait for LoanCreated event
             Assert.True(await harness.Published.Any<LoanCreated>(), "LoanCreated event should be published");
@@ -129,7 +129,7 @@ public class LoanWorkflowTests
                     .ThenInclude(rs => rs!.Installments)
                     .FirstOrDefaultAsync(x => x.Id == loan.Id);
                 Assert.NotNull(l);
-                Assert.Equal("Approved", l.Status);
+                Assert.Equal(LoanStatus.Approved, l.Status);
                 totalDue = l.RepaymentSchedule?.Installments.Sum(i => i.TotalAmount) ?? amount;
                 totalDue = Math.Ceiling(totalDue * 100m) / 100m;
 
@@ -188,7 +188,7 @@ public class LoanWorkflowTests
                 var db = finalScope.ServiceProvider.GetRequiredService<LendingDbContext>();
                 var l = await db.Loans.FindAsync(loan.Id);
                 Assert.NotNull(l);
-                Assert.Equal("Repaid", l.Status);
+                Assert.Equal(LoanStatus.Repaid, l.Status);
             }
         }
         finally
@@ -294,7 +294,7 @@ public class LoanWorkflowTests
             {
                 var db = verifyScope.ServiceProvider.GetRequiredService<LendingDbContext>();
                 var l = await db.Loans.FindAsync(loan.Id);
-                Assert.Equal("RepaymentFailed", l!.Status);
+                Assert.Equal(LoanStatus.RepaymentFailed, l!.Status);
             }
         }
         finally
@@ -507,7 +507,7 @@ public class LoanWorkflowTests
             using (var scope = provider.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<LendingDbContext>();
-                var approvedCount = await db.Loans.CountAsync(l => l.Status == "Approved");
+                var approvedCount = await db.Loans.CountAsync(l => l.Status == LoanStatus.Approved);
                 Assert.Equal(loanCount, approvedCount);
 
                 var ws = scope.ServiceProvider.GetRequiredService<IWalletService>();
